@@ -5,59 +5,353 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#09090d">
 <title>گردونه مافیایی | سام و زال</title>
+
 <style>
 :root{--gold:#f0ce7a;--cream:#fff3d8;--red:#a7192a;--dark:#111116}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;color:var(--cream);font-family:Tahoma,Arial,sans-serif;background:radial-gradient(ellipse at 50% 25%,#42131a 0%,#1a1218 42%,#07070a 100%);}
+body{margin:0;min-height:100vh;color:var(--cream);font-family:Tahoma,Arial,sans-serif;background:radial-gradient(ellipse at 50% 25%,#42131a 0%,#1a1218 42%,#07070a 100%)}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.12;background-image:radial-gradient(#e7bd69 .7px,transparent .7px);background-size:19px 19px}
 .wrap{width:min(100%,720px);margin:auto;padding:25px 14px 32px;position:relative}
-header{text-align:center;margin-bottom:20px}.kicker{font-size:11px;letter-spacing:3px;color:var(--gold);font-weight:bold;margin-bottom:9px}h1{font-size:clamp(28px,6vw,42px);margin:0;color:#fff0cf;text-shadow:0 2px 0 #68101b,0 0 22px #b51b2b66}.rule{height:1px;width:150px;margin:15px auto;background:linear-gradient(90deg,transparent,var(--gold),transparent)}.subtitle{color:#d1c0a9;font-size:13px;line-height:1.9}
-.panel{border:1px solid #b58b4b77;background:linear-gradient(145deg,#1c171cF2,#09090deF);border-radius:24px;padding:clamp(12px,3vw,24px);box-shadow:0 22px 70px #0009,inset 0 1px #fff1}
+header{text-align:center;margin-bottom:20px}
+.kicker{font-size:11px;letter-spacing:3px;color:var(--gold);font-weight:bold;margin-bottom:9px}
+h1{font-size:clamp(28px,6vw,42px);margin:0;color:#fff0cf;text-shadow:0 2px 0 #68101b,0 0 22px #b51b2b66}
+.rule{height:1px;width:150px;margin:15px auto;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.subtitle{color:#d1c0a9;font-size:13px;line-height:1.9}
+.panel{border:1px solid #b58b4b77;background:linear-gradient(145deg,#1c171cf2,#09090def);border-radius:24px;padding:clamp(12px,3vw,24px);box-shadow:0 22px 70px #0009,inset 0 1px #fff1}
 .stage{width:min(100%,500px);aspect-ratio:1;margin:0 auto 20px;position:relative;filter:drop-shadow(0 16px 24px #000b)}
 .rim{position:absolute;inset:0;border-radius:50%;padding:8px;background:linear-gradient(135deg,#fff0b5,#8c622b 25%,#f6d98d 45%,#68451f 68%,#e8c46f);box-shadow:0 0 0 3px #171015,0 0 0 5px #bd8d43,0 0 26px #d29b4540}
-#wheel{width:100%;height:100%;display:block;border-radius:50%;transform:rotate(0deg);transition:transform 6s cubic-bezier(.10,.68,.08,1);}
-.pointer{position:absolute;z-index:5;top:-2px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:0;border-bottom:34px solid #f4d78e;filter:drop-shadow(0 3px 2px #000)}.pointer:after{content:"";position:absolute;left:-9px;top:8px;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid #921524}
-.hub{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:20%;aspect-ratio:1;border-radius:50%;border:4px solid #e6c16e;background:radial-gradient(circle at 35% 25%,#432226,#100d12 72%);box-shadow:0 0 0 4px #180f12,0 0 0 6px #a67b37,0 0 22px #000b;display:grid;place-items:center;text-align:center;color:var(--gold);font-size:clamp(9px,2.5vw,14px);font-weight:bold;line-height:1.35}.hub .suits{font-size:clamp(15px,4vw,23px);line-height:1.1;display:block}
-.controls{text-align:center}.spin{border:1px solid #f3d58e;border-radius:999px;padding:14px 32px;min-width:215px;background:linear-gradient(180deg,#b52b35,#71121c);color:#fff5df;font:bold 17px Tahoma,Arial,sans-serif;box-shadow:0 6px 0 #3c0a10,0 10px 25px #0007,inset 0 1px #ffffff55;cursor:pointer}.spin:disabled{opacity:.7;cursor:wait}.status{min-height:27px;margin-top:16px;color:#d8c8ad;font-size:13px;line-height:1.8}.result{display:none;margin:15px auto 0;max-width:440px;border:1px solid #c99d51;border-radius:16px;padding:15px;background:linear-gradient(135deg,#251519,#111116);box-shadow:0 0 28px #b8863b20}.result.show{display:block}.eyebrow{color:var(--gold);font-size:11px;letter-spacing:1px}.result h2{margin:8px 0 4px;font-size:23px;color:#fff0cc}.result p{margin:0;color:#cbbba5;font-size:12px;line-height:1.9}.note{text-align:center;color:#a89a89;font-size:10px;line-height:1.9;max-width:520px;margin:17px auto 0}footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spacing:1px}
-@media(max-width:380px){.rim{padding:5px}.pointer{border-left-width:15px;border-right-width:15px;border-bottom-width:29px}}
-@media(prefers-reduced-motion:reduce){#wheel{transition-duration:1s}}
-</style></head>
-<body><div class="wrap">
-<header><div class="kicker">THE UNDERWORLD • SAM &amp; ZAL</div><h1>گردونهٔ مافیایی</h1><div class="rule"></div><div class="subtitle">یک چرخش؛ یک سرنوشت…<br>ببین امشب کدام جایزه نصیبت می‌شود.</div></header>
-<main class="panel"><div class="stage" aria-label="گردونهٔ ۱۲ بخشی"><div class="rim"><svg id="wheel" viewBox="0 0 500 500" role="img" aria-label="گردونه با ۱۲ جایزه"></svg></div><div class="pointer" aria-hidden="true"></div><div class="hub"><div><span class="suits">♠</span>سام و زال<span class="suits">♣</span></div></div></div>
-<div class="controls"><button class="spin" id="spinBtn">🎲 چرخاندن گردونه</button><div class="status" id="status" aria-live="polite">آماده‌ای؟ دکمه را بزن تا گردونه بچرخد.</div><section class="result" id="result" aria-live="polite"><div class="eyebrow">سرنوشتت مشخص شد</div><h2 id="resultTitle"></h2><p id="resultDesc"></p></section></div></main>
-<p class="note">این نسخه برای نمایش ظاهر گردونه است؛ نتیجه هنوز به شانس‌ها و جوایز واقعی ربات وصل نیست.</p><footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer></div>
+#wheel{width:100%;height:100%;display:block;border-radius:50%;transform:rotate(0deg);transition:transform 6s cubic-bezier(.10,.68,.08,1)}
+.pointer{position:absolute;z-index:5;top:-2px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:0;border-bottom:34px solid #f4d78e;filter:drop-shadow(0 3px 2px #000)}
+.pointer:after{content:"";position:absolute;left:-9px;top:8px;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid #921524}
+.hub{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:20%;aspect-ratio:1;border-radius:50%;border:4px solid #e6c16e;background:radial-gradient(circle at 35% 25%,#432226,#100d12 72%);box-shadow:0 0 0 4px #180f12,0 0 0 6px #a67b37,0 0 22px #000b;display:grid;place-items:center;text-align:center;color:var(--gold);font-size:clamp(9px,2.5vw,14px);font-weight:bold;line-height:1.35}
+.hub .suits{font-size:clamp(15px,4vw,23px);line-height:1.1;display:block}
+.controls{text-align:center}
+.spin{border:1px solid #f3d58e;border-radius:999px;padding:14px 32px;min-width:215px;background:linear-gradient(180deg,#b52b35,#71121c);color:#fff5df;font:bold 17px Tahoma,Arial,sans-serif;box-shadow:0 6px 0 #3c0a10,0 10px 25px #0007,inset 0 1px #ffffff55;cursor:pointer}
+.spin:disabled{opacity:.7;cursor:wait}
+.status{min-height:27px;margin-top:16px;color:#d8c8ad;font-size:13px;line-height:1.8}
+.result{display:none;margin:15px auto 0;max-width:440px;border:1px solid #c99d51;border-radius:16px;padding:15px;background:linear-gradient(135deg,#251519,#111116);box-shadow:0 0 28px #b8863b20}
+.result.show{display:block}
+.eyebrow{color:var(--gold);font-size:11px;letter-spacing:1px}
+.result h2{margin:8px 0 4px;font-size:23px;color:#fff0cc}
+.result p{margin:0;color:#cbbba5;font-size:12px;line-height:1.9}
+.note{text-align:center;color:#a89a89;font-size:10px;line-height:1.9;max-width:520px;margin:17px auto 0}
+footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spacing:1px}
+
+.profile-box{text-align:center;margin:0 auto 18px;padding:13px;border:1px solid #b58b4b77;border-radius:16px;background:#09090d88;max-width:440px;line-height:2}
+.profile-message{font-size:12px;color:#d1c0a9}
+.profile-chances{font-size:20px;font-weight:bold;color:var(--gold)}
+.profile-games{font-size:12px;color:#d1c0a9}
+
+@media(max-width:380px){
+.rim{padding:5px}
+.pointer{border-left-width:15px;border-right-width:15px;border-bottom-width:29px}
+}
+@media(prefers-reduced-motion:reduce){
+#wheel{transition-duration:1s}
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">THE UNDERWORLD • SAM &amp; ZAL</div>
+  <h1>گردونهٔ مافیایی</h1>
+  <div class="rule"></div>
+  <div class="subtitle">
+    یک چرخش؛ یک سرنوشت…<br>
+    ببین امشب کدام جایزه نصیبت می‌شود.
+  </div>
+</header>
+
+<section class="profile-box" aria-live="polite">
+  <div class="profile-message" id="profileMessage">
+    در حال بررسی اتصال به ربات...
+  </div>
+  <div class="profile-chances" id="profileChances"></div>
+  <div class="profile-games" id="profileGames"></div>
+</section>
+
+<main class="panel">
+
+  <div class="stage" aria-label="گردونهٔ ۱۲ بخشی">
+    <div class="rim">
+      <svg id="wheel" viewBox="0 0 500 500" role="img" aria-label="گردونه با ۱۲ جایزه"></svg>
+    </div>
+    <div class="pointer" aria-hidden="true"></div>
+    <div class="hub">
+      <div>
+        <span class="suits">♠</span>
+        سام و زال
+        <span class="suits">♣</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="spin" id="spinBtn">🎲 چرخاندن گردونه</button>
+    <div class="status" id="status" aria-live="polite">
+      این چرخش در حال حاضر نمایشی است.
+    </div>
+
+    <section class="result" id="result" aria-live="polite">
+      <div class="eyebrow">نتیجهٔ نمایشی</div>
+      <h2 id="resultTitle"></h2>
+      <p id="resultDesc"></p>
+    </section>
+  </div>
+
+</main>
+
+<p class="note">
+  این نسخه فقط اطلاعات پروفایل را می‌خواند.
+  چرخش نمایشی است و هیچ شانس یا جایزه‌ای در ربات تغییر نمی‌کند.
+</p>
+
+<footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer>
+</div>
+
 <script>
 (()=>{
+'use strict';
+
+// ==========================================
+// فهرست نمایشی جوایز گردونه
+// این فهرست به سیستم واقعی جوایز متصل نیست.
+// ==========================================
+
 const prizes=[
-{label:['VPN','۴ گیگ'],name:'اینترنت VPN چهار گیگابایت'},
-{label:['شارژ','۱۰ هزار'],name:'شارژ ۱۰ هزار تومانی'},
-{label:['VPN','۲ گیگ'],name:'اینترنت VPN دو گیگابایت'},
-{label:['شارژ','۵ هزار'],name:'شارژ ۵ هزار تومانی'},
-{label:['VPN','۱ گیگ'],name:'اینترنت VPN یک گیگابایت'},
-{label:['شارژ ویژه','۱۰۰ هزار'],name:'جایزهٔ ویژهٔ شارژ ۱۰۰ هزار تومانی'},
-{label:['اینترنت','۱ ماهه'],name:'اینترنت یک گیگابایت یک‌ماهه'},
-{label:['حاکم','سناریو'],name:'حاکم سناریو برای سه بازی'},
-{label:['شانس','اضافی'],name:'یک شانس اضافه'},
-{label:['شارژ','۲۰ هزار'],name:'شارژ ۲۰ هزار تومانی'},
-{label:['شارژ','۵۰ هزار'],name:'شارژ ۵۰ هزار تومانی'},
-{label:['شارژ','۸۰ هزار'],name:'شارژ ۸۰ هزار تومانی'}
+  {label:['VPN','۴ گیگ'],name:'اینترنت VPN چهار گیگابایت'},
+  {label:['شارژ','۱۰ هزار'],name:'شارژ ۱۰ هزار تومانی'},
+  {label:['VPN','۲ گیگ'],name:'اینترنت VPN دو گیگابایت'},
+  {label:['شارژ','۵ هزار'],name:'شارژ ۵ هزار تومانی'},
+  {label:['VPN','۱ گیگ'],name:'اینترنت VPN یک گیگابایت'},
+  {label:['شارژ ویژه','۱۰۰ هزار'],name:'جایزهٔ ویژهٔ شارژ ۱۰۰ هزار تومانی'},
+  {label:['اینترنت','۱ ماهه'],name:'اینترنت یک گیگابایت یک‌ماهه'},
+  {label:['حاکم','سناریو'],name:'حاکم سناریو برای سه بازی'},
+  {label:['شانس','اضافی'],name:'یک شانس اضافه'},
+  {label:['شارژ','۲۰ هزار'],name:'شارژ ۲۰ هزار تومانی'},
+  {label:['شارژ','۵۰ هزار'],name:'شارژ ۵۰ هزار تومانی'},
+  {label:['شارژ','۸۰ هزار'],name:'شارژ ۸۰ هزار تومانی'}
 ];
-const svg=document.getElementById('wheel'),NS='http://www.w3.org/2000/svg';let rotation=0,spinning=false;
-function el(tag,attrs={},text){const n=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n}
-function point(r,a){const t=(a-90)*Math.PI/180;return [250+r*Math.cos(t),250+r*Math.sin(t)]}
-function buildWheel(){svg.innerHTML='';const g=el('g',{id:'slices'});const colors=['#8f1422','#17171d','#b02230','#242027','#74131e','#19191f','#a51e2a','#252027','#821521','#17171d','#a51e2a','#252027'];
-prizes.forEach((p,i)=>{const start=i*30,end=start+30;const [x1,y1]=point(239,start),[x2,y2]=point(239,end);g.appendChild(el('path',{d:`M 250 250 L ${x1} ${y1} A 239 239 0 0 1 ${x2} ${y2} Z`,fill:colors[i],stroke:'#e5bd69','stroke-width':'2.5'}));
-// Text is positioned within its own wedge, radially oriented, and flipped on the lower half to remain readable.
-const mid=start+15;const [tx,ty]=point(154,mid);let rot=mid; if(mid>90&&mid<270)rot+=180;
-const tg=el('g',{transform:`translate(${tx} ${ty}) rotate(${rot})`});
-const fs= p.label.some(s=>s.length>7)?18:21;const txt=el('text',{x:0,y:0,'text-anchor':'middle','dominant-baseline':'middle',fill:'#fff3d8','font-family':'Tahoma,Arial,sans-serif','font-size':fs,'font-weight':'700','paint-order':'stroke','stroke':'#140a0d','stroke-width':'2.6','stroke-linejoin':'round'});
-p.label.forEach((line,j)=>txt.appendChild(el('tspan',{x:0,dy:j===0?'-0.52em':'1.15em'},line)));tg.appendChild(txt);g.appendChild(tg);
-});svg.appendChild(g);
-// Decorative inner and outer rings rotate with the wedges.
-svg.appendChild(el('circle',{cx:250,cy:250,r:244,fill:'none',stroke:'#f0ce7a','stroke-width':'4'}));svg.appendChild(el('circle',{cx:250,cy:250,r:88,fill:'none',stroke:'#e8c46f','stroke-width':'2','stroke-opacity':'.7'}));
+
+const svg=document.getElementById('wheel');
+const NS='http://www.w3.org/2000/svg';
+
+let rotation=0;
+let spinning=false;
+
+function el(tag,attrs={},text){
+  const n=document.createElementNS(NS,tag);
+  for(const [k,v] of Object.entries(attrs)){
+    n.setAttribute(k,v);
+  }
+  if(text!==undefined)n.textContent=text;
+  return n;
 }
-buildWheel();const btn=document.getElementById('spinBtn'),status=document.getElementById('status'),result=document.getElementById('result'),title=document.getElementById('resultTitle'),desc=document.getElementById('resultDesc');
-btn.addEventListener('click',()=>{if(spinning)return;spinning=true;btn.disabled=true;result.classList.remove('show');status.textContent='گردونه می‌چرخد…';const winner=Math.floor(Math.random()*prizes.length);const turns=6+Math.floor(Math.random()*3);const current=((rotation%360)+360)%360;const target=(360-(winner*30+15))%360;const delta=(target-current+360)%360;rotation+=turns*360+delta;svg.style.transform=`rotate(${rotation}deg)`;let done=false;const finish=()=>{if(done)return;done=true;const p=prizes[winner];title.textContent=p.name;desc.textContent='این نتیجه نمایشی است و هنوز جایزه‌ای در ربات ثبت نشده است.';result.classList.add('show');status.textContent='چرخش تمام شد.';btn.disabled=false;btn.textContent='↻ چرخش دوباره';spinning=false};svg.addEventListener('transitionend',finish,{once:true});setTimeout(finish,6700)});
+
+function point(r,a){
+  const t=(a-90)*Math.PI/180;
+  return [250+r*Math.cos(t),250+r*Math.sin(t)];
+}
+
+function buildWheel(){
+  svg.innerHTML='';
+
+  const g=el('g',{id:'slices'});
+  const colors=[
+    '#8f1422','#17171d','#b02230','#242027',
+    '#74131e','#19191f','#a51e2a','#252027',
+    '#821521','#17171d','#a51e2a','#252027'
+  ];
+
+  prizes.forEach((p,i)=>{
+    const start=i*30;
+    const end=start+30;
+    const [x1,y1]=point(239,start);
+    const [x2,y2]=point(239,end);
+
+    g.appendChild(el('path',{
+      d:`M 250 250 L ${x1} ${y1} A 239 239 0 0 1 ${x2} ${y2} Z`,
+      fill:colors[i],
+      stroke:'#e5bd69',
+      'stroke-width':'2.5'
+    }));
+
+    const mid=start+15;
+    const [tx,ty]=point(154,mid);
+    let rot=mid;
+
+    if(mid>90&&mid<270)rot+=180;
+
+    const tg=el('g',{
+      transform:`translate(${tx} ${ty}) rotate(${rot})`
+    });
+
+    const fs=p.label.some(s=>s.length>7)?18:21;
+
+    const txt=el('text',{
+      x:0,
+      y:0,
+      'text-anchor':'middle',
+      'dominant-baseline':'middle',
+      fill:'#fff3d8',
+      'font-family':'Tahoma,Arial,sans-serif',
+      'font-size':fs,
+      'font-weight':'700',
+      'paint-order':'stroke',
+      stroke:'#140a0d',
+      'stroke-width':'2.6',
+      'stroke-linejoin':'round'
+    });
+
+    p.label.forEach((line,j)=>{
+      txt.appendChild(el('tspan',{
+        x:0,
+        dy:j===0?'-0.52em':'1.15em'
+      },line));
+    });
+
+    tg.appendChild(txt);
+    g.appendChild(tg);
+  });
+
+  svg.appendChild(g);
+
+  svg.appendChild(el('circle',{
+    cx:250,cy:250,r:244,
+    fill:'none',stroke:'#f0ce7a','stroke-width':'4'
+  }));
+
+  svg.appendChild(el('circle',{
+    cx:250,cy:250,r:88,
+    fill:'none',stroke:'#e8c46f',
+    'stroke-width':'2','stroke-opacity':'.7'
+  }));
+}
+
+buildWheel();
+
+const btn=document.getElementById('spinBtn');
+const status=document.getElementById('status');
+const result=document.getElementById('result');
+const title=document.getElementById('resultTitle');
+const desc=document.getElementById('resultDesc');
+
+// ==========================================
+// دریافت اطلاعات پروفایل از Webhook
+// فقط خواندن؛ بدون تغییر اطلاعات
+// ==========================================
+
+const profileMessage=document.getElementById('profileMessage');
+const profileChances=document.getElementById('profileChances');
+const profileGames=document.getElementById('profileGames');
+
+async function loadRealProfile(){
+  const apiUrl=new URLSearchParams(window.location.search).get('api');
+
+  if(!apiUrl){
+    profileMessage.textContent=
+      'برای مشاهدهٔ اطلاعات حساب، صفحه را از لینک ربات باز کن.';
+    return;
+  }
+
+  let parsedUrl;
+
+  try{
+    parsedUrl=new URL(apiUrl);
+  }catch(e){
+    profileMessage.textContent='لینک دریافت اطلاعات معتبر نیست.';
+    return;
+  }
+
+  if(
+    parsedUrl.protocol!=='https:' ||
+    parsedUrl.hostname!=='webapp.telebothost.com'
+  ){
+    profileMessage.textContent='آدرس دریافت اطلاعات معتبر نیست.';
+    return;
+  }
+
+  try{
+    profileMessage.textContent='در حال دریافت اطلاعات حساب...';
+
+    const response=await fetch(apiUrl,{
+      method:'GET',
+      cache:'no-store'
+    });
+
+    if(!response.ok){
+      throw new Error('HTTP '+response.status);
+    }
+
+    const data=await response.json();
+
+    if(!data.ok || !data.profile_found){
+      profileMessage.textContent='پروفایل شما پیدا نشد.';
+      return;
+    }
+
+    profileMessage.textContent='✅ اطلاعات حساب دریافت شد';
+    profileChances.textContent='🎟️ شانس گردونه: '+data.chances;
+    profileGames.textContent='🎮 بازی‌های سام و زال: '+data.samozal_games;
+
+  }catch(e){
+    profileMessage.textContent=
+      '❌ دریافت اطلاعات ناموفق بود. اتصال API را بررسی می‌کنیم.';
+    console.error('Profile API error:',e);
+  }
+}
+
+loadRealProfile();
+
+// ==========================================
+// چرخش نمایشی گردونه
+// این بخش شانس واقعی را مصرف نمی‌کند.
+// ==========================================
+
+btn.addEventListener('click',()=>{
+  if(spinning)return;
+
+  spinning=true;
+  btn.disabled=true;
+  result.classList.remove('show');
+  status.textContent='گردونه می‌چرخد…';
+
+  const winner=Math.floor(Math.random()*prizes.length);
+  const turns=6+Math.floor(Math.random()*3);
+  const current=((rotation%360)+360)%360;
+  const target=(360-(winner*30+15))%360;
+  const delta=(target-current+360)%360;
+
+  rotation+=turns*360+delta;
+  svg.style.transform=`rotate(${rotation}deg)`;
+
+  let done=false;
+
+  const finish=()=>{
+    if(done)return;
+    done=true;
+
+    const p=prizes[winner];
+
+    title.textContent=p.name;
+    desc.textContent=
+      'این نتیجه نمایشی است و هیچ جایزه‌ای در ربات ثبت نشده است.';
+
+    result.classList.add('show');
+    status.textContent='چرخش نمایشی تمام شد.';
+    btn.disabled=false;
+    btn.textContent='↻ چرخش دوباره';
+    spinning=false;
+  };
+
+  svg.addEventListener('transitionend',finish,{once:true});
+  setTimeout(finish,6700);
+});
+
 })();
-</script></body></html>
+</script>
+</body>
+</html>
