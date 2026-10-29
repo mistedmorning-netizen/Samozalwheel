@@ -36,12 +36,10 @@ h1{font-size:clamp(28px,6vw,42px);margin:0;color:#fff0cf;text-shadow:0 2px 0 #68
 .result p{margin:0;color:#cbbba5;font-size:12px;line-height:1.9}
 .note{text-align:center;color:#a89a89;font-size:10px;line-height:1.9;max-width:520px;margin:17px auto 0}
 footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spacing:1px}
-
 .profile-box{text-align:center;margin:0 auto 18px;padding:13px;border:1px solid #b58b4b77;border-radius:16px;background:#09090d88;max-width:440px;line-height:2}
 .profile-message{font-size:12px;color:#d1c0a9}
 .profile-chances{font-size:20px;font-weight:bold;color:var(--gold)}
 .profile-games{font-size:12px;color:#d1c0a9}
-
 @media(max-width:380px){
 .rim{padding:5px}
 .pointer{border-left-width:15px;border-right-width:15px;border-bottom-width:29px}
@@ -66,15 +64,12 @@ footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spa
 </header>
 
 <section class="profile-box" aria-live="polite">
-  <div class="profile-message" id="profileMessage">
-    در حال بررسی اتصال به ربات...
-  </div>
+  <div class="profile-message" id="profileMessage">در حال بررسی اتصال به ربات...</div>
   <div class="profile-chances" id="profileChances"></div>
   <div class="profile-games" id="profileGames"></div>
 </section>
 
 <main class="panel">
-
   <div class="stage" aria-label="گردونهٔ ۱۲ بخشی">
     <div class="rim">
       <svg id="wheel" viewBox="0 0 500 500" role="img" aria-label="گردونه با ۱۲ جایزه"></svg>
@@ -90,23 +85,20 @@ footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spa
   </div>
 
   <div class="controls">
-    <button class="spin" id="spinBtn">🎲 چرخاندن گردونه</button>
-    <div class="status" id="status" aria-live="polite">
-      این چرخش در حال حاضر نمایشی است.
-    </div>
+    <button class="spin" id="spinBtn" type="button">🎲 چرخاندن گردونه</button>
+    <div class="status" id="status" aria-live="polite">آمادهٔ آزمایش اتصال گردونه.</div>
 
     <section class="result" id="result" aria-live="polite">
-      <div class="eyebrow">نتیجهٔ نمایشی</div>
+      <div class="eyebrow">نتیجهٔ آزمایشی API</div>
       <h2 id="resultTitle"></h2>
       <p id="resultDesc"></p>
     </section>
   </div>
-
 </main>
 
 <p class="note">
-  این نسخه فقط اطلاعات پروفایل را می‌خواند.
-  چرخش نمایشی است و هیچ شانس یا جایزه‌ای در ربات تغییر نمی‌کند.
+  این نسخه اطلاعات پروفایل را می‌خواند و نتیجه را از API آزمایشی دریافت می‌کند.
+  هیچ شانس یا جایزه‌ای در ربات مصرف یا ثبت نمی‌شود.
 </p>
 
 <footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer>
@@ -116,89 +108,83 @@ footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spa
 (()=>{
 'use strict';
 
-// ==========================================
-// فهرست نمایشی جوایز گردونه
-// این فهرست به سیستم واقعی جوایز متصل نیست.
-// ==========================================
-
 const prizes=[
-  {label:['VPN','۴ گیگ'],name:'اینترنت VPN چهار گیگابایت'},
-  {label:['شارژ','۱۰ هزار'],name:'شارژ ۱۰ هزار تومانی'},
-  {label:['VPN','۲ گیگ'],name:'اینترنت VPN دو گیگابایت'},
-  {label:['شارژ','۵ هزار'],name:'شارژ ۵ هزار تومانی'},
-  {label:['VPN','۱ گیگ'],name:'اینترنت VPN یک گیگابایت'},
-  {label:['شارژ ویژه','۱۰۰ هزار'],name:'جایزهٔ ویژهٔ شارژ ۱۰۰ هزار تومانی'},
-  {label:['اینترنت','۱ ماهه'],name:'اینترنت یک گیگابایت یک‌ماهه'},
-  {label:['حاکم','سناریو'],name:'حاکم سناریو برای سه بازی'},
-  {label:['شانس','اضافی'],name:'یک شانس اضافه'},
-  {label:['شارژ','۲۰ هزار'],name:'شارژ ۲۰ هزار تومانی'},
-  {label:['شارژ','۵۰ هزار'],name:'شارژ ۵۰ هزار تومانی'},
-  {label:['شارژ','۸۰ هزار'],name:'شارژ ۸۰ هزار تومانی'}
+  {code:'P1',label:['VPN','۴ گیگ'],name:'اینترنت VPN چهار گیگابایت'},
+  {code:'P2',label:['شارژ','۱۰ هزار'],name:'شارژ ۱۰ هزار تومانی'},
+  {code:'P3',label:['VPN','۲ گیگ'],name:'اینترنت VPN دو گیگابایت'},
+  {code:'P4',label:['شارژ','۵ هزار'],name:'شارژ ۵ هزار تومانی'},
+  {code:'P5',label:['VPN','۱ گیگ'],name:'اینترنت VPN یک گیگابایت'},
+  {code:'P6',label:['شارژ ویژه','۱۰۰ هزار'],name:'جایزهٔ ویژهٔ شارژ ۱۰۰ هزار تومانی'},
+  {code:'P7',label:['اینترنت','۱ ماهه'],name:'اینترنت یک گیگابایت یک‌ماهه'},
+  {code:'P8',label:['حاکم','سناریو'],name:'حاکم سناریو برای سه بازی'},
+  {code:'P9',label:['شانس','اضافی'],name:'یک شانس اضافه'},
+  {code:'P10',label:['شارژ','۲۰ هزار'],name:'شارژ ۲۰ هزار تومانی'},
+  {code:'P11',label:['شارژ','۵۰ هزار'],name:'شارژ ۵۰ هزار تومانی'},
+  {code:'P12',label:['شارژ','۸۰ هزار'],name:'شارژ ۸۰ هزار تومانی'}
 ];
 
 const svg=document.getElementById('wheel');
+const btn=document.getElementById('spinBtn');
+const status=document.getElementById('status');
+const result=document.getElementById('result');
+const title=document.getElementById('resultTitle');
+const desc=document.getElementById('resultDesc');
 const NS='http://www.w3.org/2000/svg';
 
 let rotation=0;
 let spinning=false;
 
 function el(tag,attrs={},text){
-  const n=document.createElementNS(NS,tag);
-  for(const [k,v] of Object.entries(attrs)){
-    n.setAttribute(k,v);
-  }
-  if(text!==undefined)n.textContent=text;
-  return n;
+  const node=document.createElementNS(NS,tag);
+  for(const [key,value] of Object.entries(attrs)) node.setAttribute(key,value);
+  if(text!==undefined) node.textContent=text;
+  return node;
 }
 
-function point(r,a){
-  const t=(a-90)*Math.PI/180;
-  return [250+r*Math.cos(t),250+r*Math.sin(t)];
+function point(radius,angle){
+  const radians=(angle-90)*Math.PI/180;
+  return [250+radius*Math.cos(radians),250+radius*Math.sin(radians)];
 }
 
 function buildWheel(){
   svg.innerHTML='';
-
-  const g=el('g',{id:'slices'});
+  const group=el('g',{id:'slices'});
   const colors=[
     '#8f1422','#17171d','#b02230','#242027',
     '#74131e','#19191f','#a51e2a','#252027',
     '#821521','#17171d','#a51e2a','#252027'
   ];
 
-  prizes.forEach((p,i)=>{
-    const start=i*30;
+  prizes.forEach((prize,index)=>{
+    const start=index*30;
     const end=start+30;
     const [x1,y1]=point(239,start);
     const [x2,y2]=point(239,end);
 
-    g.appendChild(el('path',{
+    group.appendChild(el('path',{
       d:`M 250 250 L ${x1} ${y1} A 239 239 0 0 1 ${x2} ${y2} Z`,
-      fill:colors[i],
+      fill:colors[index],
       stroke:'#e5bd69',
       'stroke-width':'2.5'
     }));
 
-    const mid=start+15;
-    const [tx,ty]=point(154,mid);
-    let rot=mid;
+    const middle=start+15;
+    const [tx,ty]=point(154,middle);
+    let textRotation=middle;
+    if(middle>90&&middle<270) textRotation+=180;
 
-    if(mid>90&&mid<270)rot+=180;
-
-    const tg=el('g',{
-      transform:`translate(${tx} ${ty}) rotate(${rot})`
+    const textGroup=el('g',{
+      transform:`translate(${tx} ${ty}) rotate(${textRotation})`
     });
 
-    const fs=p.label.some(s=>s.length>7)?18:21;
-
-    const txt=el('text',{
-      x:0,
-      y:0,
+    const fontSize=prize.label.some(line=>line.length>7)?18:21;
+    const text=el('text',{
+      x:0,y:0,
       'text-anchor':'middle',
       'dominant-baseline':'middle',
       fill:'#fff3d8',
       'font-family':'Tahoma,Arial,sans-serif',
-      'font-size':fs,
+      'font-size':fontSize,
       'font-weight':'700',
       'paint-order':'stroke',
       stroke:'#140a0d',
@@ -206,24 +192,22 @@ function buildWheel(){
       'stroke-linejoin':'round'
     });
 
-    p.label.forEach((line,j)=>{
-      txt.appendChild(el('tspan',{
+    prize.label.forEach((line,lineIndex)=>{
+      text.appendChild(el('tspan',{
         x:0,
-        dy:j===0?'-0.52em':'1.15em'
+        dy:lineIndex===0?'-0.52em':'1.15em'
       },line));
     });
 
-    tg.appendChild(txt);
-    g.appendChild(tg);
+    textGroup.appendChild(text);
+    group.appendChild(textGroup);
   });
 
-  svg.appendChild(g);
-
+  svg.appendChild(group);
   svg.appendChild(el('circle',{
     cx:250,cy:250,r:244,
     fill:'none',stroke:'#f0ce7a','stroke-width':'4'
   }));
-
   svg.appendChild(el('circle',{
     cx:250,cy:250,r:88,
     fill:'none',stroke:'#e8c46f',
@@ -233,44 +217,32 @@ function buildWheel(){
 
 buildWheel();
 
-const btn=document.getElementById('spinBtn');
-const status=document.getElementById('status');
-const result=document.getElementById('result');
-const title=document.getElementById('resultTitle');
-const desc=document.getElementById('resultDesc');
-
-// ==========================================
-// دریافت اطلاعات پروفایل از Webhook
-// فقط خواندن؛ بدون تغییر اطلاعات
-// ==========================================
-
 const profileMessage=document.getElementById('profileMessage');
 const profileChances=document.getElementById('profileChances');
 const profileGames=document.getElementById('profileGames');
 
-async function loadRealProfile(){
-  const apiUrl=new URLSearchParams(window.location.search).get('api');
-
-  if(!apiUrl){
-    profileMessage.textContent=
-      'برای مشاهدهٔ اطلاعات حساب، صفحه را از لینک ربات باز کن.';
-    return;
-  }
-
-  let parsedUrl;
+function getSafeWebhookUrl(parameterName){
+  const value=new URLSearchParams(window.location.search).get(parameterName);
+  if(!value) return null;
 
   try{
-    parsedUrl=new URL(apiUrl);
-  }catch(e){
-    profileMessage.textContent='لینک دریافت اطلاعات معتبر نیست.';
-    return;
-  }
+    const parsed=new URL(value);
+    if(
+      parsed.protocol!=='https:' ||
+      parsed.hostname!=='webapp.telebothost.com'
+    ) return null;
 
-  if(
-    parsedUrl.protocol!=='https:' ||
-    parsedUrl.hostname!=='webapp.telebothost.com'
-  ){
-    profileMessage.textContent='آدرس دریافت اطلاعات معتبر نیست.';
+    return parsed.href;
+  }catch(error){
+    return null;
+  }
+}
+
+async function loadRealProfile(){
+  const apiUrl=getSafeWebhookUrl('api');
+
+  if(!apiUrl){
+    profileMessage.textContent='برای مشاهدهٔ اطلاعات حساب، صفحه را از لینک ربات باز کن.';
     return;
   }
 
@@ -282,73 +254,119 @@ async function loadRealProfile(){
       cache:'no-store'
     });
 
-    if(!response.ok){
-      throw new Error('HTTP '+response.status);
-    }
+    if(!response.ok) throw new Error('HTTP '+response.status);
 
     const data=await response.json();
 
-    if(!data.ok || !data.profile_found){
-      profileMessage.textContent='پروفایل شما پیدا نشد.';
-      return;
+    if(data.ok!==true||data.profile_found!==true){
+      throw new Error('PROFILE_NOT_FOUND');
     }
 
     profileMessage.textContent='✅ اطلاعات حساب دریافت شد';
     profileChances.textContent='🎟️ شانس گردونه: '+data.chances;
     profileGames.textContent='🎮 بازی‌های سام و زال: '+data.samozal_games;
 
-  }catch(e){
-    profileMessage.textContent=
-      '❌ دریافت اطلاعات ناموفق بود. اتصال API را بررسی می‌کنیم.';
-    console.error('Profile API error:',e);
+  }catch(error){
+    profileMessage.textContent='❌ دریافت اطلاعات ناموفق بود. اتصال API را بررسی می‌کنیم.';
+    console.error('Profile API error:',error);
   }
 }
 
 loadRealProfile();
 
-// ==========================================
-// چرخش نمایشی گردونه
-// این بخش شانس واقعی را مصرف نمی‌کند.
-// ==========================================
+function waitForSpinEnd(){
+  return new Promise(resolve=>{
+    let completed=false;
 
-btn.addEventListener('click',()=>{
-  if(spinning)return;
+    const finish=()=>{
+      if(completed) return;
+      completed=true;
+      svg.removeEventListener('transitionend',onTransitionEnd);
+      clearTimeout(fallbackTimer);
+      resolve();
+    };
+
+    const onTransitionEnd=event=>{
+      if(event.target===svg) finish();
+    };
+
+    const fallbackTimer=setTimeout(finish,7000);
+    svg.addEventListener('transitionend',onTransitionEnd);
+  });
+}
+
+async function requestTestResult(){
+  const spinApiUrl=getSafeWebhookUrl('spinapi');
+  if(!spinApiUrl) throw new Error('SPIN_API_URL_MISSING');
+
+  const response=await fetch(spinApiUrl,{
+    method:'GET',
+    cache:'no-store'
+  });
+
+  if(!response.ok) throw new Error('SPIN_API_HTTP_'+response.status);
+
+  const data=await response.json();
+
+  if(
+    data.ok!==true ||
+    data.test_mode!==true ||
+    data.saved!==false ||
+    data.chance_consumed!==false ||
+    !data.prize ||
+    !/^P([1-9]|1[0-2])$/.test(data.prize.code)
+  ){
+    throw new Error('INVALID_TEST_API_RESPONSE');
+  }
+
+  const index=Number(data.prize.code.slice(1))-1;
+  if(index<0||index>=prizes.length) throw new Error('INVALID_PRIZE_CODE');
+
+  return {data,index};
+}
+
+btn.addEventListener('click',async()=>{
+  if(spinning) return;
 
   spinning=true;
   btn.disabled=true;
   result.classList.remove('show');
-  status.textContent='گردونه می‌چرخد…';
+  status.textContent='در حال دریافت نتیجهٔ آزمایشی از ربات...';
 
-  const winner=Math.floor(Math.random()*prizes.length);
-  const turns=6+Math.floor(Math.random()*3);
-  const current=((rotation%360)+360)%360;
-  const target=(360-(winner*30+15))%360;
-  const delta=(target-current+360)%360;
+  try{
+    const {data,index}=await requestTestResult();
 
-  rotation+=turns*360+delta;
-  svg.style.transform=`rotate(${rotation}deg)`;
+    const current=((rotation%360)+360)%360;
+    const target=(360-(index*30+15))%360;
+    const delta=(target-current+360)%360;
+    const turns=6;
 
-  let done=false;
+    rotation+=turns*360+delta;
+    svg.style.transform=`rotate(${rotation}deg)`;
 
-  const finish=()=>{
-    if(done)return;
-    done=true;
+    await waitForSpinEnd();
 
-    const p=prizes[winner];
-
-    title.textContent=p.name;
+    title.textContent=prizes[index].name;
     desc.textContent=
-      'این نتیجه نمایشی است و هیچ جایزه‌ای در ربات ثبت نشده است.';
+      'کد نتیجه: '+data.prize.code+
+      ' — نتیجه از API آزمایشی دریافت شد. '+
+      'هیچ جایزه‌ای ثبت نشده و هیچ شانسی مصرف نشده است.';
 
     result.classList.add('show');
-    status.textContent='چرخش نمایشی تمام شد.';
+    status.textContent='چرخش آزمایشی تمام شد.';
+
+  }catch(error){
+    console.error('Spin API error:',error);
+    title.textContent='نتیجه دریافت نشد';
+    desc.textContent='API آزمایشی پاسخ معتبر نداد. هیچ جایزه‌ای ثبت یا شانس مصرف نشده است.';
+    result.classList.add('show');
+    status.textContent='خطا در اتصال آزمایشی؛ لطفاً لینک تازه‌ای از ربات بگیر.';
+
+  }finally{
     btn.disabled=false;
     btn.textContent='↻ چرخش دوباره';
     spinning=false;
-  };
-
-  svg.addEventListener('transitionend',finish,{once:true});
-  setTimeout(finish,6700);
+  }
 });
 
 })();
