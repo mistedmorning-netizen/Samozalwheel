@@ -86,10 +86,10 @@ footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spa
 
   <div class="controls">
     <button class="spin" id="spinBtn" type="button">🎲 چرخاندن گردونه</button>
-    <div class="status" id="status" aria-live="polite">آمادهٔ آزمایش اتصال گردونه.</div>
+    <div class="status" id="status" aria-live="polite">آمادهٔ چرخش.</div>
 
     <section class="result" id="result" aria-live="polite">
-      <div class="eyebrow">نتیجهٔ آزمایشی API</div>
+      <div class="eyebrow">نتیجهٔ گردونه</div>
       <h2 id="resultTitle"></h2>
       <p id="resultDesc"></p>
     </section>
@@ -97,8 +97,8 @@ footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spa
 </main>
 
 <p class="note">
-  این نسخه اطلاعات پروفایل را می‌خواند و نتیجه را از API آزمایشی دریافت می‌کند.
-  هیچ شانس یا جایزه‌ای در ربات مصرف یا ثبت نمی‌شود.
+  نتیجهٔ چرخش از API ربات دریافت می‌شود. اگر چرخش ثبت شود، شانس و جایزه در سیستم ربات به‌روزرسانی می‌شوند.
+  در صورت خطا، وضعیت چرخش را بررسی کنید و از تلاش مجدد خودکار خودداری کنید.
 </p>
 
 <footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer>
@@ -133,6 +133,7 @@ const NS='http://www.w3.org/2000/svg';
 
 let rotation=0;
 let spinning=false;
+let spinAttempted=false;
 
 function el(tag,attrs={},text){
   const node=document.createElementNS(NS,tag);
@@ -227,6 +228,7 @@ function getSafeWebhookUrl(parameterName){
 
   try{
     const parsed=new URL(value);
+
     if(
       parsed.protocol!=='https:' ||
       parsed.hostname!=='webapp.telebothost.com'
@@ -266,8 +268,13 @@ async function loadRealProfile(){
     profileChances.textContent='🎟️ شانس گردونه: '+data.chances;
     profileGames.textContent='🎮 بازی‌های سام و زال: '+data.samozal_games;
 
+    if(Number(data.chances)<=0){
+      btn.disabled=true;
+      status.textContent='شانس فعالی ندارید.';
+    }
+
   }catch(error){
-    profileMessage.textContent='❌ دریافت اطلاعات ناموفق بود. اتصال API را بررسی می‌کنیم.';
+    profileMessage.textContent='❌ دریافت اطلاعات ناموفق بود. اتصال API را بررسی کنید.';
     console.error('Profile API error:',error);
   }
 }
@@ -295,76 +302,107 @@ function waitForSpinEnd(){
   });
 }
 
-async function requestTestResult(){
+async function requestRealResult(){
   const spinApiUrl=getSafeWebhookUrl('spinapi');
-  if(!spinApiUrl) throw new Error('SPIN_API_URL_MISSING');
+
+  if(!spinApiUrl){
+    throw new Error('SPIN_API_URL_MISSING');
+  }
 
   const response=await fetch(spinApiUrl,{
     method:'GET',
     cache:'no-store'
   });
 
-  if(!response.ok) throw new Error('SPIN_API_HTTP_'+response.status);
+  if(!response.ok){
+    throw new Error('SPIN_API_HTTP_'+response.status);
+  }
 
   const data=await response.json();
 
+  if(data.ok!==true){
+    if(data.message==='No active chances'){
+      return {noChances:true,data};
+    }
+
+    throw new Error(data.message||'REAL_API_FAILED');
+  }
+
   if(
-    data.ok!==true ||
-    data.test_mode!==true ||
-    data.saved!==false ||
-    data.chance_consumed!==false ||
+    data.test_mode!==false ||
+    data.saved!==true ||
     !data.prize ||
     !/^P([1-9]|1[0-2])$/.test(data.prize.code)
   ){
-    throw new Error('INVALID_TEST_API_RESPONSE');
+    throw new Error('INVALID_REAL_API_RESPONSE');
   }
 
   const index=Number(data.prize.code.slice(1))-1;
-  if(index<0||index>=prizes.length) throw new Error('INVALID_PRIZE_CODE');
 
-  return {data,index};
+  if(index<0||index>=prizes.length){
+    throw new Error('INVALID_PRIZE_CODE');
+  }
+
+  return {noChances:false,data,index};
 }
 
 btn.addEventListener('click',async()=>{
-  if(spinning) return;
+  if(spinning||spinAttempted) return;
 
   spinning=true;
+  spinAttempted=true;
   btn.disabled=true;
   result.classList.remove('show');
-  status.textContent='در حال دریافت نتیجهٔ آزمایشی از ربات...';
+  status.textContent='در حال دریافت نتیجهٔ چرخش از ربات...';
 
   try{
-    const {data,index}=await requestTestResult();
+    const spinResult=await requestRealResult();
+
+    if(spinResult.noChances){
+      profileChances.textContent='🎟️ شانس گردونه: 0';
+      title.textContent='شانس کافی نیست';
+      desc.textContent='برای چرخش، ابتدا باید شانس جدید دریافت کنید.';
+      result.classList.add('show');
+      status.textContent='شانس فعالی برای چرخش ندارید.';
+      return;
+    }
+
+    const {data,index}=spinResult;
 
     const current=((rotation%360)+360)%360;
     const target=(360-(index*30+15))%360;
     const delta=(target-current+360)%360;
-    const turns=6;
 
-    rotation+=turns*360+delta;
+    rotation+=6*360+delta;
     svg.style.transform=`rotate(${rotation}deg)`;
 
     await waitForSpinEnd();
 
-    title.textContent=prizes[index].name;
+    title.textContent=data.prize.name;
     desc.textContent=
       'کد نتیجه: '+data.prize.code+
-      ' — نتیجه از API آزمایشی دریافت شد. '+
-      'هیچ جایزه‌ای ثبت نشده و هیچ شانسی مصرف نشده است.';
+      ' — نتیجه از API واقعی دریافت شد و جایزه در سیستم ربات ثبت شده است.';
+
+    profileChances.textContent='🎟️ شانس گردونه: '+data.chances;
+    profileGames.textContent='🎮 بازی‌های سام و زال: '+data.samozal_games;
 
     result.classList.add('show');
-    status.textContent='چرخش آزمایشی تمام شد.';
+    status.textContent='چرخش ثبت شد.';
 
   }catch(error){
-    console.error('Spin API error:',error);
-    title.textContent='نتیجه دریافت نشد';
-    desc.textContent='API آزمایشی پاسخ معتبر نداد. هیچ جایزه‌ای ثبت یا شانس مصرف نشده است.';
+    console.error('Real Spin API error:',error);
+
+    title.textContent='وضعیت چرخش نامشخص';
+    desc.textContent=
+      'پاسخ معتبر دریافت نشد. ممکن است ربات چرخش را ثبت کرده باشد؛ '+
+      'برای جلوگیری از ثبت جایزهٔ تکراری، دوباره تلاش نکنید.';
+
     result.classList.add('show');
-    status.textContent='خطا در اتصال آزمایشی؛ لطفاً لینک تازه‌ای از ربات بگیر.';
+    status.textContent='خطا در دریافت نتیجه؛ وضعیت ثبت جایزه باید بررسی شود.';
 
   }finally{
-    btn.disabled=false;
-    btn.textContent='↻ چرخش دوباره';
+    btn.disabled=true;
+    btn.textContent='↻ چرخش انجام شد';
     spinning=false;
   }
 });
