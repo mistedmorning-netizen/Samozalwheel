@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#09090d">
 <title>گردونه مافیایی | سام و زال</title>
 
+<!-- کتابخانه رسمی تلگرام -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
 <style>
 :root{--gold:#f0ce7a;--cream:#fff3d8;--red:#a7192a;--dark:#111116}
 *{box-sizing:border-box}
@@ -20,20 +23,14 @@ h1{font-size:clamp(28px,6vw,42px);margin:0;color:#fff0cf;text-shadow:0 2px 0 #68
 .panel{border:1px solid #b58b4b77;background:linear-gradient(145deg,#1c171cf2,#09090def);border-radius:24px;padding:clamp(12px,3vw,24px);box-shadow:0 22px 70px #0009,inset 0 1px #fff1}
 .stage{width:min(100%,500px);aspect-ratio:1;margin:0 auto 20px;position:relative;filter:drop-shadow(0 16px 24px #000b)}
 .rim{position:absolute;inset:0;border-radius:50%;padding:8px;background:linear-gradient(135deg,#fff0b5,#8c622b 25%,#f6d98d 45%,#68451f 68%,#e8c46f);box-shadow:0 0 0 3px #171015,0 0 0 5px #bd8d43,0 0 26px #d29b4540}
-#wheel{width:100%;height:100%;display:block;border-radius:50%;transform:rotate(0deg);transition:transform 6s cubic-bezier(.10,.68,.08,1)}
+#wheel{width:100%;height:100%;display:block;border-radius:50%;transform:rotate(0deg)}
 .pointer{position:absolute;z-index:5;top:-2px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:0;border-bottom:34px solid #f4d78e;filter:drop-shadow(0 3px 2px #000)}
 .pointer:after{content:"";position:absolute;left:-9px;top:8px;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid #921524}
 .hub{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:20%;aspect-ratio:1;border-radius:50%;border:4px solid #e6c16e;background:radial-gradient(circle at 35% 25%,#432226,#100d12 72%);box-shadow:0 0 0 4px #180f12,0 0 0 6px #a67b37,0 0 22px #000b;display:grid;place-items:center;text-align:center;color:var(--gold);font-size:clamp(9px,2.5vw,14px);font-weight:bold;line-height:1.35}
 .hub .suits{font-size:clamp(15px,4vw,23px);line-height:1.1;display:block}
 .controls{text-align:center}
-.spin{border:1px solid #f3d58e;border-radius:999px;padding:14px 32px;min-width:215px;background:linear-gradient(180deg,#b52b35,#71121c);color:#fff5df;font:bold 17px Tahoma,Arial,sans-serif;box-shadow:0 6px 0 #3c0a10,0 10px 25px #0007,inset 0 1px #ffffff55;cursor:pointer}
-.spin:disabled{opacity:.7;cursor:wait}
+.spin{border:1px solid #f3d58e;border-radius:999px;padding:14px 32px;min-width:215px;background:linear-gradient(180deg,#b52b35,#71121c);color:#fff5df;font:bold 17px Tahoma,Arial,sans-serif;opacity:.7}
 .status{min-height:27px;margin-top:16px;color:#d8c8ad;font-size:13px;line-height:1.8}
-.result{display:none;margin:15px auto 0;max-width:440px;border:1px solid #c99d51;border-radius:16px;padding:15px;background:linear-gradient(135deg,#251519,#111116);box-shadow:0 0 28px #b8863b20}
-.result.show{display:block}
-.eyebrow{color:var(--gold);font-size:11px;letter-spacing:1px}
-.result h2{margin:8px 0 4px;font-size:23px;color:#fff0cc}
-.result p{margin:0;color:#cbbba5;font-size:12px;line-height:1.9}
 .note{text-align:center;color:#a89a89;font-size:10px;line-height:1.9;max-width:520px;margin:17px auto 0}
 footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spacing:1px}
 .profile-box{text-align:center;margin:0 auto 18px;padding:13px;border:1px solid #b58b4b77;border-radius:16px;background:#09090d88;max-width:440px;line-height:2}
@@ -43,9 +40,6 @@ footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spa
 @media(max-width:380px){
 .rim{padding:5px}
 .pointer{border-left-width:15px;border-right-width:15px;border-bottom-width:29px}
-}
-@media(prefers-reduced-motion:reduce){
-#wheel{transition-duration:1s}
 }
 </style>
 </head>
@@ -64,7 +58,7 @@ footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spa
 </header>
 
 <section class="profile-box" aria-live="polite">
-  <div class="profile-message" id="profileMessage">در حال بررسی اتصال به ربات...</div>
+  <div class="profile-message" id="profileMessage">در حال بررسی اتصال تلگرام...</div>
   <div class="profile-chances" id="profileChances"></div>
   <div class="profile-games" id="profileGames"></div>
 </section>
@@ -85,71 +79,71 @@ footer{text-align:center;margin-top:20px;color:#b38b4e;font-size:11px;letter-spa
   </div>
 
   <div class="controls">
-    <button class="spin" id="spinBtn" type="button">🎲 چرخاندن گردونه</button>
-    <div class="status" id="status" aria-live="polite">آمادهٔ چرخش.</div>
-
-    <section class="result" id="result" aria-live="polite">
-      <div class="eyebrow">نتیجهٔ گردونه</div>
-      <h2 id="resultTitle"></h2>
-      <p id="resultDesc"></p>
-    </section>
+    <button class="spin" id="spinBtn" type="button" disabled>
+      🎲 آزمایش اتصال
+    </button>
+    <div class="status" id="status" aria-live="polite">
+      در حال بررسی اطلاعات راه‌اندازی تلگرام...
+    </div>
   </div>
 </main>
 
 <p class="note">
-  نتیجهٔ چرخش از API ربات دریافت می‌شود. اگر چرخش ثبت شود، شانس و جایزه در سیستم ربات به‌روزرسانی می‌شوند.
-  در صورت خطا، وضعیت چرخش را بررسی کنید و از تلاش مجدد خودکار خودداری کنید.
+  این نسخه فقط برای آزمایش اتصال Telegram Web App است و هیچ چرخش یا جایزه‌ای ثبت نمی‌کند.
 </p>
 
 <footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer>
 </div>
 
 <script>
-(()=>{
+(function(){
 'use strict';
 
 const prizes=[
-  {code:'P1',label:['VPN','۴ گیگ'],name:'اینترنت VPN چهار گیگابایت'},
-  {code:'P2',label:['شارژ','۱۰ هزار'],name:'شارژ ۱۰ هزار تومانی'},
-  {code:'P3',label:['VPN','۲ گیگ'],name:'اینترنت VPN دو گیگابایت'},
-  {code:'P4',label:['شارژ','۵ هزار'],name:'شارژ ۵ هزار تومانی'},
-  {code:'P5',label:['VPN','۱ گیگ'],name:'اینترنت VPN یک گیگابایت'},
-  {code:'P6',label:['شارژ ویژه','۱۰۰ هزار'],name:'جایزهٔ ویژهٔ شارژ ۱۰۰ هزار تومانی'},
-  {code:'P7',label:['اینترنت','۱ ماهه'],name:'اینترنت یک گیگابایت یک‌ماهه'},
-  {code:'P8',label:['حاکم','سناریو'],name:'حاکم سناریو برای سه بازی'},
-  {code:'P9',label:['شانس','اضافی'],name:'یک شانس اضافه'},
-  {code:'P10',label:['شارژ','۲۰ هزار'],name:'شارژ ۲۰ هزار تومانی'},
-  {code:'P11',label:['شارژ','۵۰ هزار'],name:'شارژ ۵۰ هزار تومانی'},
-  {code:'P12',label:['شارژ','۸۰ هزار'],name:'شارژ ۸۰ هزار تومانی'}
+  {label:['VPN','۴ گیگ']},
+  {label:['شارژ','۱۰ هزار']},
+  {label:['VPN','۲ گیگ']},
+  {label:['شارژ','۵ هزار']},
+  {label:['VPN','۱ گیگ']},
+  {label:['شارژ ویژه','۱۰۰ هزار']},
+  {label:['اینترنت','۱ ماهه']},
+  {label:['حاکم','سناریو']},
+  {label:['شانس','اضافی']},
+  {label:['شارژ','۲۰ هزار']},
+  {label:['شارژ','۵۰ هزار']},
+  {label:['شارژ','۸۰ هزار']}
 ];
 
 const svg=document.getElementById('wheel');
-const btn=document.getElementById('spinBtn');
+const profileMessage=document.getElementById('profileMessage');
+const profileChances=document.getElementById('profileChances');
+const profileGames=document.getElementById('profileGames');
 const status=document.getElementById('status');
-const result=document.getElementById('result');
-const title=document.getElementById('resultTitle');
-const desc=document.getElementById('resultDesc');
-const NS='http://www.w3.org/2000/svg';
 
-let rotation=0;
-let spinning=false;
-let spinAttempted=false;
+const NS='http://www.w3.org/2000/svg';
 
 function el(tag,attrs={},text){
   const node=document.createElementNS(NS,tag);
-  for(const [key,value] of Object.entries(attrs)) node.setAttribute(key,value);
+  for(const [key,value] of Object.entries(attrs)){
+    node.setAttribute(key,value);
+  }
   if(text!==undefined) node.textContent=text;
   return node;
 }
 
 function point(radius,angle){
   const radians=(angle-90)*Math.PI/180;
-  return [250+radius*Math.cos(radians),250+radius*Math.sin(radians)];
+  return [
+    250+radius*Math.cos(radians),
+    250+radius*Math.sin(radians)
+  ];
 }
 
 function buildWheel(){
   svg.innerHTML='';
+
   const group=el('g',{id:'slices'});
+
   const colors=[
     '#8f1422','#17171d','#b02230','#242027',
     '#74131e','#19191f','#a51e2a','#252027',
@@ -159,6 +153,7 @@ function buildWheel(){
   prizes.forEach((prize,index)=>{
     const start=index*30;
     const end=start+30;
+
     const [x1,y1]=point(239,start);
     const [x2,y2]=point(239,end);
 
@@ -171,6 +166,7 @@ function buildWheel(){
 
     const middle=start+15;
     const [tx,ty]=point(154,middle);
+
     let textRotation=middle;
     if(middle>90&&middle<270) textRotation+=180;
 
@@ -178,14 +174,14 @@ function buildWheel(){
       transform:`translate(${tx} ${ty}) rotate(${textRotation})`
     });
 
-    const fontSize=prize.label.some(line=>line.length>7)?18:21;
     const text=el('text',{
-      x:0,y:0,
+      x:0,
+      y:0,
       'text-anchor':'middle',
       'dominant-baseline':'middle',
       fill:'#fff3d8',
       'font-family':'Tahoma,Arial,sans-serif',
-      'font-size':fontSize,
+      'font-size':21,
       'font-weight':'700',
       'paint-order':'stroke',
       stroke:'#140a0d',
@@ -205,209 +201,88 @@ function buildWheel(){
   });
 
   svg.appendChild(group);
+
   svg.appendChild(el('circle',{
     cx:250,cy:250,r:244,
-    fill:'none',stroke:'#f0ce7a','stroke-width':'4'
+    fill:'none',
+    stroke:'#f0ce7a',
+    'stroke-width':'4'
   }));
+
   svg.appendChild(el('circle',{
     cx:250,cy:250,r:88,
-    fill:'none',stroke:'#e8c46f',
-    'stroke-width':'2','stroke-opacity':'.7'
+    fill:'none',
+    stroke:'#e8c46f',
+    'stroke-width':'2',
+    'stroke-opacity':'.7'
   }));
 }
 
 buildWheel();
 
-const profileMessage=document.getElementById('profileMessage');
-const profileChances=document.getElementById('profileChances');
-const profileGames=document.getElementById('profileGames');
+// ==========================================
+// آزمایش اتصال Telegram Web App
+// ==========================================
 
-function getSafeWebhookUrl(parameterName){
-  const value=new URLSearchParams(window.location.search).get(parameterName);
-  if(!value) return null;
+function checkTelegramConnection(){
 
-  try{
-    const parsed=new URL(value);
+  const tg = window.Telegram && window.Telegram.WebApp;
 
-    if(
-      parsed.protocol!=='https:' ||
-      parsed.hostname!=='webapp.telebothost.com'
-    ) return null;
+  if(!tg){
+    profileMessage.textContent =
+      '❌ کتابخانه Telegram Web App در دسترس نیست.';
 
-    return parsed.href;
-  }catch(error){
-    return null;
-  }
-}
+    status.textContent =
+      'اتصال به محیط تلگرام شناسایی نشد.';
 
-async function loadRealProfile(){
-  const apiUrl=getSafeWebhookUrl('api');
-
-  if(!apiUrl){
-    profileMessage.textContent='برای مشاهدهٔ اطلاعات حساب، صفحه را از لینک ربات باز کن.';
     return;
   }
 
-  try{
-    profileMessage.textContent='در حال دریافت اطلاعات حساب...';
+  tg.ready();
 
-    const response=await fetch(apiUrl,{
-      method:'GET',
-      cache:'no-store'
-    });
+  const initData = tg.initData || '';
+  const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
 
-    if(!response.ok) throw new Error('HTTP '+response.status);
+  if(!initData){
+    profileMessage.textContent =
+      '❌ تلگرام initData را به صفحه نفرستاده است.';
 
-    const data=await response.json();
+    status.textContent =
+      'صفحه باز شده، اما اطلاعات راه‌اندازی تلگرام خالی است.';
 
-    if(data.ok!==true||data.profile_found!==true){
-      throw new Error('PROFILE_NOT_FOUND');
-    }
+    console.log('Telegram WebApp detected');
+    console.log('initData is empty');
 
-    profileMessage.textContent='✅ اطلاعات حساب دریافت شد';
-    profileChances.textContent='🎟️ شانس گردونه: '+data.chances;
-    profileGames.textContent='🎮 بازی‌های سام و زال: '+data.samozal_games;
-
-    if(Number(data.chances)<=0){
-      btn.disabled=true;
-      status.textContent='شانس فعالی ندارید.';
-    }
-
-  }catch(error){
-    profileMessage.textContent='❌ دریافت اطلاعات ناموفق بود. اتصال API را بررسی کنید.';
-    console.error('Profile API error:',error);
+    return;
   }
+
+  profileMessage.textContent =
+    '✅ اطلاعات راه‌اندازی تلگرام دریافت شد.';
+
+  status.textContent =
+    'طول اطلاعات دریافتی: ' + initData.length;
+
+  if(user && user.id){
+    profileChances.textContent =
+      '🆔 شناسه تلگرام: ' + user.id;
+
+    profileGames.textContent =
+      '👤 نام: ' + (user.first_name || 'ثبت نشده');
+  }else{
+    profileChances.textContent =
+      '⚠️ اطلاعات کاربر در دادهٔ راه‌اندازی پیدا نشد.';
+  }
+
+  console.log('Telegram WebApp detected');
+  console.log('initData length:',initData.length);
+  console.log('User available:',!!user);
+  console.log('User ID:',user ? user.id : 'not available');
 }
 
-loadRealProfile();
-
-function waitForSpinEnd(){
-  return new Promise(resolve=>{
-    let completed=false;
-
-    const finish=()=>{
-      if(completed) return;
-      completed=true;
-      svg.removeEventListener('transitionend',onTransitionEnd);
-      clearTimeout(fallbackTimer);
-      resolve();
-    };
-
-    const onTransitionEnd=event=>{
-      if(event.target===svg) finish();
-    };
-
-    const fallbackTimer=setTimeout(finish,7000);
-    svg.addEventListener('transitionend',onTransitionEnd);
-  });
-}
-
-async function requestRealResult(){
-  const spinApiUrl=getSafeWebhookUrl('spinapi');
-
-  if(!spinApiUrl){
-    throw new Error('SPIN_API_URL_MISSING');
-  }
-
-  const response=await fetch(spinApiUrl,{
-    method:'GET',
-    cache:'no-store'
-  });
-
-  if(!response.ok){
-    throw new Error('SPIN_API_HTTP_'+response.status);
-  }
-
-  const data=await response.json();
-
-  if(data.ok!==true){
-    if(data.message==='No active chances'){
-      return {noChances:true,data};
-    }
-
-    throw new Error(data.message||'REAL_API_FAILED');
-  }
-
-  if(
-    data.test_mode!==false ||
-    data.saved!==true ||
-    !data.prize ||
-    !/^P([1-9]|1[0-2])$/.test(data.prize.code)
-  ){
-    throw new Error('INVALID_REAL_API_RESPONSE');
-  }
-
-  const index=Number(data.prize.code.slice(1))-1;
-
-  if(index<0||index>=prizes.length){
-    throw new Error('INVALID_PRIZE_CODE');
-  }
-
-  return {noChances:false,data,index};
-}
-
-btn.addEventListener('click',async()=>{
-  if(spinning||spinAttempted) return;
-
-  spinning=true;
-  spinAttempted=true;
-  btn.disabled=true;
-  result.classList.remove('show');
-  status.textContent='در حال دریافت نتیجهٔ چرخش از ربات...';
-
-  try{
-    const spinResult=await requestRealResult();
-
-    if(spinResult.noChances){
-      profileChances.textContent='🎟️ شانس گردونه: 0';
-      title.textContent='شانس کافی نیست';
-      desc.textContent='برای چرخش، ابتدا باید شانس جدید دریافت کنید.';
-      result.classList.add('show');
-      status.textContent='شانس فعالی برای چرخش ندارید.';
-      return;
-    }
-
-    const {data,index}=spinResult;
-
-    const current=((rotation%360)+360)%360;
-    const target=(360-(index*30+15))%360;
-    const delta=(target-current+360)%360;
-
-    rotation+=6*360+delta;
-    svg.style.transform=`rotate(${rotation}deg)`;
-
-    await waitForSpinEnd();
-
-    title.textContent=data.prize.name;
-    desc.textContent=
-      'کد نتیجه: '+data.prize.code+
-      ' — نتیجه از API واقعی دریافت شد و جایزه در سیستم ربات ثبت شده است.';
-
-    profileChances.textContent='🎟️ شانس گردونه: '+data.chances;
-    profileGames.textContent='🎮 بازی‌های سام و زال: '+data.samozal_games;
-
-    result.classList.add('show');
-    status.textContent='چرخش ثبت شد.';
-
-  }catch(error){
-    console.error('Real Spin API error:',error);
-
-    title.textContent='وضعیت چرخش نامشخص';
-    desc.textContent=
-      'پاسخ معتبر دریافت نشد. ممکن است ربات چرخش را ثبت کرده باشد؛ '+
-      'برای جلوگیری از ثبت جایزهٔ تکراری، دوباره تلاش نکنید.';
-
-    result.classList.add('show');
-    status.textContent='خطا در دریافت نتیجه؛ وضعیت ثبت جایزه باید بررسی شود.';
-
-  }finally{
-    btn.disabled=true;
-    btn.textContent='↻ چرخش انجام شد';
-    spinning=false;
-  }
-});
+checkTelegramConnection();
 
 })();
 </script>
+
 </body>
 </html>
