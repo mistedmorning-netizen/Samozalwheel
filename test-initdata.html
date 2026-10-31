@@ -1,1 +1,98 @@
 
+<!doctype html>
+
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#09090d">
+<title>آزمایش اتصال تلگرام | سام و زال</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+body {
+  margin: 0;
+  padding: 25px 15px;
+  background: #111116;
+  color: #fff3d8;
+  font-family: Tahoma, Arial, sans-serif;
+  text-align: center;
+  line-height: 2;
+}
+.box {
+  max-width: 480px;
+  margin: 30px auto;
+  padding: 22px;
+  border: 1px solid #b58b4b;
+  border-radius: 18px;
+  background: #1c171c;
+}
+h2 { color: #f0ce7a; }
+#result {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 12px;
+  background: #09090d;
+  direction: rtl;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.ok { color: #7de0a0; }
+.error { color: #ff8585; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>♠ سام و زال ♣</h2>
+  <div>آزمایش اطلاعات راه‌اندازی تلگرام</div>
+  <div id="result">در حال بررسی...</div>
+</div><script>
+(function () {
+  "use strict";
+
+  const output = document.getElementById("result");
+  const tg = window.Telegram && window.Telegram.WebApp;
+
+  function showResult(title, details, success) {
+    output.innerHTML = "";
+
+    const heading = document.createElement("div");
+    heading.className = success ? "ok" : "error";
+    heading.textContent = title;
+    output.appendChild(heading);
+
+    details.forEach(function (item) {
+      const line = document.createElement("div");
+      line.textContent = item;
+      output.appendChild(line);
+    });
+  }
+
+  if (!tg) {
+    showResult(
+      "❌ محیط تلگرام شناسایی نشد.",
+      ["صفحه باید از داخل تلگرام باز شود."],
+      false
+    );
+    return;
+  }
+
+  tg.ready();
+
+  const initData = tg.initData || "";
+  const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+
+  showResult(
+    initData.length > 0
+      ? "✅ اطلاعات initData دریافت شد."
+      : "❌ اطلاعات initData خالی است.",
+    [
+      "وجود initData: " + (initData.length > 0 ? "بله" : "خیر"),
+      "طول initData: " + initData.length,
+      "وجود اطلاعات کاربر در initDataUnsafe: " + (user ? "بله" : "خیر"),
+      "شناسه کاربر در دسترس مرورگر: " + (user ? "بله" : "خیر")
+    ],
+    initData.length > 0
+  );
+})();
+</script></body>
+</html>
