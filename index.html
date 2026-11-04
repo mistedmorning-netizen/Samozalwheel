@@ -5,7 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#09090d">
-<title>گردونه مافیایی | سام و زال</title><script src="https://telegram.org/js/telegram-web-app.js"></script><style>
+<title>گردونه مافیایی | سام و زال</title><script>
+window.__telegramScriptState = 'loading';
+</script><script
+  src="https://telegram.org/js/telegram-web-app.js"
+  onload="window.__telegramScriptState='loaded';"
+  onerror="window.__telegramScriptState='error';"
+></script><style>
 :root{
   --gold:#f0ce7a;
   --cream:#fff3d8;
@@ -207,7 +213,8 @@ footer{
   }
 }
 </style></head><body>
-<div class="wrap"><header>
+<div class="wrap">
+<header>
   <div class="kicker">THE UNDERWORLD • SAM &amp; ZAL</div>
   <h1>گردونهٔ مافیایی</h1>
   <div class="rule"></div>
@@ -235,18 +242,20 @@ footer{
   </div>  <div class="controls">
     <button class="spin" id="spinBtn" type="button" disabled>
       🎲 در حال اتصال...
-    </button>
-    <div class="status" id="status" aria-live="polite">
-      در حال بررسی اطلاعات راه‌اندازی تلگرام...
-    </div>
-    <div class="result" id="result" aria-live="polite">
-      <div class="result-title" id="resultTitle"></div>
-      <div class="result-desc" id="resultDesc"></div>
-    </div>
+    </button><div class="status" id="status" aria-live="polite">
+  در حال بررسی اطلاعات راه‌اندازی تلگرام...
+</div>
+
+<div class="result" id="result" aria-live="polite">
+  <div class="result-title" id="resultTitle"></div>
+  <div class="result-desc" id="resultDesc"></div>
+</div>
+
   </div>
 </main><p class="note">
   این گردونه رایگان و آنلاین است. نتیجهٔ چرخش از سامانهٔ گردونه دریافت و ثبت می‌شود.
-</p><footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer></div><script>
+</p><footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer>
+</div><script>
 (function(){
 'use strict';
 
@@ -283,7 +292,8 @@ const result=document.getElementById('result');
 const resultTitle=document.getElementById('resultTitle');
 const resultDesc=document.getElementById('resultDesc');
 
-const tg=window.Telegram && window.Telegram.WebApp;
+let tg=null;
+
 const params=new URLSearchParams(window.location.search);
 
 const profileApiUrl=params.get('api');
@@ -301,10 +311,85 @@ let profileLoaded=false;
 let remainingChances=0;
 
 // ==========================================
+// تشخیص و انتظار برای کتابخانه تلگرام
+// ==========================================
+
+function getTelegramWebApp(){
+
+  if(
+    window.Telegram &&
+    window.Telegram.WebApp
+  ){
+    return window.Telegram.WebApp;
+  }
+
+  return null;
+}
+
+function waitForTelegramWebApp(){
+
+  return new Promise(resolve=>{
+
+    const startedAt=Date.now();
+    const timeout=4000;
+    const interval=100;
+
+    function check(){
+
+      const webApp=getTelegramWebApp();
+
+      if(webApp){
+
+        tg=webApp;
+
+        console.log('Telegram WebApp detected.');
+
+        console.log(
+          'Telegram script state:',
+          window.__telegramScriptState
+        );
+
+        resolve(tg);
+        return;
+      }
+
+      if(window.__telegramScriptState==='error'){
+
+        console.error(
+          'Telegram Web App script failed to load.'
+        );
+
+        resolve(null);
+        return;
+      }
+
+      if(Date.now()-startedAt>=timeout){
+
+        console.error(
+          'Telegram WebApp detection timed out.',
+          {
+            scriptState:window.__telegramScriptState,
+            telegramObjectExists:!!window.Telegram
+          }
+        );
+
+        resolve(null);
+        return;
+      }
+
+      setTimeout(check,interval);
+    }
+
+    check();
+  });
+}
+
+// ==========================================
 // ابزارهای SVG
 // ==========================================
 
 function el(tag,attrs={},text){
+
   const node=document.createElementNS(NS,tag);
 
   Object.entries(attrs).forEach(([key,value])=>{
@@ -317,6 +402,7 @@ function el(tag,attrs={},text){
 }
 
 function point(radius,angle){
+
   const radians=(angle-90)*Math.PI/180;
 
   return [
@@ -489,23 +575,89 @@ async function loadProfile(){
   spinBtn.disabled=true;
   spinBtn.style.opacity='.7';
 
-  if(!tg){
+  profileMessage.textContent='در حال بررسی اتصال تلگرام...';
+  status.textContent='در حال بررسی بارگذاری کتابخانه تلگرام...';
+
+  const detectedTelegram=await waitForTelegramWebApp();
+
+  if(!detectedTelegram){
+
+    const scriptState=window.__telegramScriptState;
+
     profileMessage.textContent='❌ محیط تلگرام شناسایی نشد.';
-    status.textContent='لطفاً صفحه را از داخل تلگرام باز کن.';
+
+    if(scriptState==='error'){
+
+      status.textContent=
+        'فایل اتصال تلگرام بارگذاری نشد. احتمالاً ارتباط شبکه با telegram.org برقرار نشده است.';
+
+    }else if(scriptState==='loaded'){
+
+      status.textContent=
+        'فایل تلگرام بارگذاری شد، اما رابط Telegram.WebApp در دسترس نیست.';
+
+    }else{
+
+      status.textContent=
+        'بارگذاری فایل تلگرام کامل نشد. ارتباط شبکه یا WebView را بررسی کنید.';
+    }
+
+    console.error(
+      'Telegram detection failed:',
+      {
+        scriptState:scriptState,
+        telegramObjectExists:!!window.Telegram,
+        webAppExists:!!(
+          window.Telegram &&
+          window.Telegram.WebApp
+        )
+      }
+    );
+
     return;
   }
 
-  tg.ready();
+  try{
 
-  if(!tg.initData){
+    tg.ready();
+
+    if(typeof tg.expand==='function'){
+      tg.expand();
+    }
+
+  }catch(error){
+
+    console.error('Telegram initialization error:',error);
+  }
+
+  if(
+    typeof tg.initData!=='string' ||
+    tg.initData.trim()===''
+  ){
+
     profileMessage.textContent='❌ اطلاعات راه‌اندازی تلگرام دریافت نشد.';
-    status.textContent='صفحه باید به‌عنوان Mini App باز شود.';
+
+    status.textContent=
+      'کتابخانه تلگرام فعال است، اما اطلاعات Mini App دریافت نشده است.';
+
+    console.error(
+      'Telegram initData is empty.',
+      {
+        scriptState:window.__telegramScriptState,
+        webAppExists:!!tg,
+        platform:tg.platform||'unknown',
+        version:tg.version||'unknown'
+      }
+    );
+
     return;
   }
 
   if(!profileApiUrl){
+
     profileMessage.textContent='❌ لینک دریافت پروفایل وجود ندارد.';
     status.textContent='لینک اختصاصی گردونه ناقص است.';
+
     return;
   }
 
@@ -525,8 +677,10 @@ async function loadProfile(){
     }
 
     if(data.profile_found!==true){
+
       profileMessage.textContent='⚠️ پروفایل شما در سیستم پیدا نشد.';
       status.textContent='ابتدا باید پروفایل شما ثبت شده باشد.';
+
       return;
     }
 
@@ -579,6 +733,7 @@ function animateToPrize(prizeCode){
     let finished=false;
 
     function finish(){
+
       if(finished) return;
 
       finished=true;
@@ -588,6 +743,7 @@ function animateToPrize(prizeCode){
     }
 
     function onTransitionEnd(event){
+
       if(event.target===svg) finish();
     }
 
@@ -672,6 +828,7 @@ async function spinWheel(){
     profileChances.textContent='🎟️ شانس باقی‌مانده: '+remainingChances;
 
     if(data.samozal_games!==undefined){
+
       profileGames.textContent=
         '🎮 تعداد بازی‌ها: '+(Number(data.samozal_games)||0);
     }
@@ -728,11 +885,6 @@ try{
   buildWheel();
 
   spinBtn.addEventListener('click',spinWheel);
-
-  if(tg){
-    tg.ready();
-    tg.expand();
-  }
 
   loadProfile();
 
