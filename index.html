@@ -1,17 +1,55 @@
 <!doctype html>
-
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#09090d">
-<title>گردونه مافیایی | سام و زال</title><script>
+<title>گردونه مافیایی | سام و زال</title>
+
+<!-- ==========================================
+     بارگذاری دو مسیره کتابخانه تلگرام
+========================================== -->
+
+<script>
 window.__telegramScriptState = 'loading';
-</script><script
+window.__telegramScriptSource = 'telegram';
+window.__telegramFallbackStarted = false;
+
+window.__loadTelegramFallback = function(){
+
+  if(window.__telegramFallbackStarted) return;
+
+  window.__telegramFallbackStarted = true;
+  window.__telegramScriptState = 'fallback-loading';
+  window.__telegramScriptSource = 'github';
+
+  console.warn('Telegram CDN failed. Trying GitHub fallback.');
+
+  var script = document.createElement('script');
+
+  script.src = 'https://mistedmorning-netizen.github.io/Samozalwheel/telegram-web-app.js';
+
+  script.onload = function(){
+    window.__telegramScriptState = 'loaded-fallback';
+    console.log('Telegram library loaded from GitHub.');
+  };
+
+  script.onerror = function(){
+    window.__telegramScriptState = 'error';
+    console.error('Both Telegram and GitHub libraries failed.');
+  };
+
+  document.head.appendChild(script);
+};
+</script>
+
+<script
   src="https://telegram.org/js/telegram-web-app.js"
   onload="window.__telegramScriptState='loaded';"
-  onerror="window.__telegramScriptState='error';"
-></script><style>
+  onerror="window.__loadTelegramFallback();"
+></script>
+
+<style>
 :root{
   --gold:#f0ce7a;
   --cream:#fff3d8;
@@ -212,8 +250,13 @@ footer{
     border-bottom-width:29px;
   }
 }
-</style></head><body>
+</style>
+</head>
+
+<body>
+
 <div class="wrap">
+
 <header>
   <div class="kicker">THE UNDERWORLD • SAM &amp; ZAL</div>
   <h1>گردونهٔ مافیایی</h1>
@@ -222,11 +265,16 @@ footer{
     یک چرخش؛ یک سرنوشت…<br>
     ببین امشب کدام جایزه نصیبت می‌شود.
   </div>
-</header><section class="profile-box" aria-live="polite">
+</header>
+
+<section class="profile-box" aria-live="polite">
   <div class="profile-message" id="profileMessage">در حال بررسی اتصال تلگرام...</div>
   <div class="profile-chances" id="profileChances"></div>
   <div class="profile-games" id="profileGames"></div>
-</section><main class="panel">
+</section>
+
+<main class="panel">
+
   <div class="stage" aria-label="گردونهٔ ۱۲ بخشی">
     <div class="rim">
       <svg id="wheel" viewBox="0 0 500 500" role="img" aria-label="گردونه با ۱۲ جایزه"></svg>
@@ -239,23 +287,35 @@ footer{
         <span class="suits">♣</span>
       </div>
     </div>
-  </div>  <div class="controls">
+  </div>
+
+  <div class="controls">
+
     <button class="spin" id="spinBtn" type="button" disabled>
       🎲 در حال اتصال...
-    </button><div class="status" id="status" aria-live="polite">
-  در حال بررسی اطلاعات راه‌اندازی تلگرام...
-</div>
+    </button>
 
-<div class="result" id="result" aria-live="polite">
-  <div class="result-title" id="resultTitle"></div>
-  <div class="result-desc" id="resultDesc"></div>
-</div>
+    <div class="status" id="status" aria-live="polite">
+      در حال بررسی اطلاعات راه‌اندازی تلگرام...
+    </div>
+
+    <div class="result" id="result" aria-live="polite">
+      <div class="result-title" id="resultTitle"></div>
+      <div class="result-desc" id="resultDesc"></div>
+    </div>
 
   </div>
-</main><p class="note">
+</main>
+
+<p class="note">
   این گردونه رایگان و آنلاین است. نتیجهٔ چرخش از سامانهٔ گردونه دریافت و ثبت می‌شود.
-</p><footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer>
-</div><script>
+</p>
+
+<footer>♠ SAM O ZAL • MAFIA NIGHT ♣</footer>
+
+</div>
+
+<script>
 (function(){
 'use strict';
 
@@ -331,7 +391,7 @@ function waitForTelegramWebApp(){
   return new Promise(resolve=>{
 
     const startedAt=Date.now();
-    const timeout=4000;
+    const timeout=15000;
     const interval=100;
 
     function check(){
@@ -343,11 +403,8 @@ function waitForTelegramWebApp(){
         tg=webApp;
 
         console.log('Telegram WebApp detected.');
-
-        console.log(
-          'Telegram script state:',
-          window.__telegramScriptState
-        );
+        console.log('Library source:',window.__telegramScriptSource);
+        console.log('Script state:',window.__telegramScriptState);
 
         resolve(tg);
         return;
@@ -355,9 +412,7 @@ function waitForTelegramWebApp(){
 
       if(window.__telegramScriptState==='error'){
 
-        console.error(
-          'Telegram Web App script failed to load.'
-        );
+        console.error('Both library sources failed.');
 
         resolve(null);
         return;
@@ -369,6 +424,7 @@ function waitForTelegramWebApp(){
           'Telegram WebApp detection timed out.',
           {
             scriptState:window.__telegramScriptState,
+            scriptSource:window.__telegramScriptSource,
             telegramObjectExists:!!window.Telegram
           }
         );
@@ -589,7 +645,7 @@ async function loadProfile(){
     if(scriptState==='error'){
 
       status.textContent=
-        'فایل اتصال تلگرام بارگذاری نشد. احتمالاً ارتباط شبکه با telegram.org برقرار نشده است.';
+        'بارگذاری کتابخانه از هر دو مسیر تلگرام و GitHub ناموفق بود.';
 
     }else if(scriptState==='loaded'){
 
@@ -606,6 +662,7 @@ async function loadProfile(){
       'Telegram detection failed:',
       {
         scriptState:scriptState,
+        scriptSource:window.__telegramScriptSource,
         telegramObjectExists:!!window.Telegram,
         webAppExists:!!(
           window.Telegram &&
@@ -898,5 +955,7 @@ try{
 }
 
 })();
-</script></body>
+</script>
+
+</body>
 </html>
