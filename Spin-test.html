@@ -1,1 +1,376 @@
 
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>آزمایش ضبط گردونه</title>
+
+<style>
+body {
+  margin: 0;
+  padding: 20px;
+  background: #101827;
+  color: white;
+  font-family: Tahoma, sans-serif;
+  text-align: center;
+}
+
+h2 {
+  color: #ffd45c;
+}
+
+canvas {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  margin: 15px auto;
+  display: block;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 14px 25px;
+  margin: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#spinBtn {
+  background: #e0a82e;
+  color: #111;
+}
+
+#downloadBtn {
+  background: #218c58;
+  color: white;
+  display: none;
+}
+
+video {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 20px;
+  border-radius: 12px;
+  display: none;
+}
+
+#status {
+  margin-top: 15px;
+  color: #ffd45c;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🎡 آزمایش ضبط گردونه</h2>
+
+<canvas id="wheelCanvas" width="600" height="600"></canvas>
+
+<button id="spinBtn">شروع چرخش و ضبط</button>
+
+<br>
+
+<button id="downloadBtn">دانلود فیلم آزمایشی</button>
+
+<div id="status">آماده شروع آزمایش</div>
+
+<video id="preview" controls playsinline></video>
+
+<script>
+
+const canvas = document.getElementById("wheelCanvas");
+const ctx = canvas.getContext("2d");
+
+const spinBtn = document.getElementById("spinBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+const preview = document.getElementById("preview");
+const statusText = document.getElementById("status");
+
+const prizes = [
+  "جایزه ۱",
+  "جایزه ۲",
+  "جایزه ۳",
+  "جایزه ۴",
+  "جایزه ۵",
+  "جایزه ۶",
+  "جایزه ۷",
+  "جایزه ۸",
+  "جایزه ۹",
+  "جایزه ۱۰",
+  "جایزه ۱۱",
+  "جایزه ۱۲"
+];
+
+const colors = [
+  "#e74c3c",
+  "#f39c12",
+  "#27ae60",
+  "#2980b9",
+  "#8e44ad",
+  "#16a085",
+  "#d35400",
+  "#c0392b",
+  "#2c3e50",
+  "#7f8c8d",
+  "#9b59b6",
+  "#1abc9c"
+];
+
+const center = 300;
+const radius = 260;
+
+let rotation = 0;
+let recordingBlob = null;
+let recorder = null;
+
+function drawWheel() {
+
+  ctx.clearRect(0, 0, 600, 600);
+
+  // گردونه
+  ctx.save();
+
+  ctx.translate(center, center);
+  ctx.rotate(rotation);
+
+  const slice = (Math.PI * 2) / prizes.length;
+
+  for (let i = 0; i < prizes.length; i++) {
+
+    const start = i * slice;
+    const end = start + slice;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius, start, end);
+    ctx.closePath();
+
+    ctx.fillStyle = colors[i];
+    ctx.fill();
+
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // متن جایزه
+    ctx.save();
+
+    ctx.rotate(start + slice / 2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px Tahoma";
+
+    ctx.fillText(prizes[i], radius - 20, 8);
+
+    ctx.restore();
+  }
+
+  // مرکز گردونه
+  ctx.beginPath();
+  ctx.arc(0, 0, 35, 0, Math.PI * 2);
+  ctx.fillStyle = "#f1c40f";
+  ctx.fill();
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  ctx.restore();
+
+  // نشانگر ثابت بالای گردونه
+  ctx.beginPath();
+  ctx.moveTo(300, 65);
+  ctx.lineTo(270, 15);
+  ctx.lineTo(330, 15);
+  ctx.closePath();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+
+  ctx.strokeStyle = "#e0a82e";
+  ctx.lineWidth = 5;
+  ctx.stroke();
+}
+
+// رسم اولیه
+drawWheel();
+
+function startRecording() {
+
+  return new Promise((resolve, reject) => {
+
+    if (!canvas.captureStream || !window.MediaRecorder) {
+      reject(new Error("ضبط ویدئو در این مرورگر پشتیبانی نمی‌شود."));
+      return;
+    }
+
+    const stream = canvas.captureStream(30);
+
+    let mimeType = "";
+
+    const supportedTypes = [
+      "video/webm;codecs=vp9",
+      "video/webm;codecs=vp8",
+      "video/webm"
+    ];
+
+    for (const type of supportedTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        mimeType = type;
+        break;
+      }
+    }
+
+    if (!mimeType) {
+      reject(new Error("فرمت مناسب ضبط پیدا نشد."));
+      return;
+    }
+
+    const chunks = [];
+
+    recorder = new MediaRecorder(stream, {
+      mimeType: mimeType
+    });
+
+    recorder.ondataavailable = function(event) {
+      if (event.data && event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+
+    recorder.onstop = function() {
+
+      recordingBlob = new Blob(chunks, {
+        type: mimeType
+      });
+
+      preview.src = URL.createObjectURL(recordingBlob);
+      preview.style.display = "block";
+
+      downloadBtn.style.display = "inline-block";
+
+      statusText.textContent =
+        "✅ ضبط با موفقیت انجام شد.";
+
+      stream.getTracks().forEach(track => track.stop());
+
+      resolve();
+    };
+
+    recorder.onerror = function() {
+      reject(new Error("خطا در ضبط ویدئو."));
+    };
+
+    recorder.start();
+
+    resolve();
+
+  });
+}
+
+function animateWheel() {
+
+  return new Promise(resolve => {
+
+    const startRotation = rotation;
+
+    const extraRotation =
+      (Math.PI * 2 * 7) +
+      Math.random() * Math.PI * 2;
+
+    const targetRotation = startRotation + extraRotation;
+
+    const duration = 6000;
+    const startTime = performance.now();
+
+    function frame(now) {
+
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // کاهش تدریجی سرعت
+      const easing =
+        1 - Math.pow(1 - progress, 4);
+
+      rotation =
+        startRotation +
+        extraRotation * easing;
+
+      drawWheel();
+
+      if (progress < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        rotation = targetRotation;
+        drawWheel();
+        resolve();
+      }
+    }
+
+    requestAnimationFrame(frame);
+
+  });
+}
+
+spinBtn.addEventListener("click", async function() {
+
+  spinBtn.disabled = true;
+  downloadBtn.style.display = "none";
+  preview.style.display = "none";
+
+  recordingBlob = null;
+
+  try {
+
+    statusText.textContent = "در حال آماده‌سازی ضبط...";
+
+    await startRecording();
+
+    statusText.textContent = "🎥 ضبط شروع شد؛ گردونه در حال چرخش است...";
+
+    await animateWheel();
+
+    statusText.textContent = "چرخش تمام شد؛ در حال ذخیره فیلم...";
+
+    recorder.stop();
+
+  } catch (error) {
+
+    statusText.textContent = "❌ " + error.message;
+
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+
+  } finally {
+
+    spinBtn.disabled = false;
+
+  }
+
+});
+
+downloadBtn.addEventListener("click", function() {
+
+  if (!recordingBlob) return;
+
+  const url = URL.createObjectURL(recordingBlob);
+
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "wheel-test.webm";
+
+  link.click();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+});
+
+</script>
+
+</body>
+</html>
