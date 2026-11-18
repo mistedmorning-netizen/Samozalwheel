@@ -1,65 +1,115 @@
-
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VUP Connection Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>آزمایش انتقال فایل به TelebotHost</title>
+
+    <style>
+        body {
+            font-family: Tahoma, sans-serif;
+            text-align: center;
+            padding: 25px;
+            background: #f2f2f2;
+        }
+
+        button {
+            padding: 14px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background: #1769aa;
+            color: white;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            direction: ltr;
+            text-align: left;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    </style>
 </head>
 
-<body style="font-family:tahoma;text-align:center;padding:30px">
+<body>
 
-<h3>آزمایش ارتباط با TelebotHost</h3>
+    <h3>آزمایش انتقال فایل باینری</h3>
 
-<button onclick="sendTest()">
-ارسال پیام آزمایشی
-</button>
+    <p>حجم فایل آزمایشی: ۱۰۰ کیلوبایت</p>
 
-<pre id="result" style="direction:ltr;white-space:pre-wrap"></pre>
+    <button onclick="sendTest()">
+        ارسال فایل آزمایشی
+    </button>
 
-<script>
+    <pre id="result">آماده ارسال...</pre>
 
-async function sendTest() {
+    <script>
 
-  var result = document.getElementById("result");
+    async function sendTest() {
 
-  result.textContent = "در حال ارسال...";
+        var result = document.getElementById("result");
 
-  var endpoint =
-  "https://webapp.telebothost.com/ownlang/webhook/509194429820984?command=%2Fvup&sig=85207df476e1dfa94d08b84e0349ee358fa060166ad93f6023042523b1d967dd&expires=1795018166&gl=1";
+        result.textContent = "در حال آماده‌سازی فایل...";
 
-  try {
+        // آدرس وب‌هوک دستور vup
+        var endpoint =
+        "https://webapp.telebothost.com/ownlang/webhook/509194429820984?command=%2Fvup&sig=85207df476e1dfa94d08b84e0349ee358fa060166ad93f6023042523b1d967dd&expires=1795018166&gl=1";
 
-    var response = await fetch(endpoint, {
-      method: "POST",
+        try {
 
-      headers: {
-        "Content-Type": "application/json"
-      },
+            // ساخت فایل باینری ۱۰۰ کیلوبایتی
+            var bytes = new Uint8Array(100 * 1024);
 
-      body: JSON.stringify({
-        test: true,
-        message: "Hello from Samozalwheel",
-        file_size: 0
-      })
-    });
+            for (var i = 0; i < bytes.length; i++) {
+                bytes[i] = i % 256;
+            }
 
-    var data = await response.text();
+            var testFile = new Blob(
+                [bytes],
+                {
+                    type: "application/octet-stream"
+                }
+            );
 
-    result.textContent =
-      "HTTP STATUS: " + response.status +
-      "\n\n" + data;
+            result.textContent =
+                "در حال ارسال فایل...\n" +
+                "File size: " + testFile.size + " bytes";
 
-  } catch (error) {
+            // ارسال مستقیم فایل باینری
+            var response = await fetch(endpoint, {
 
-    result.textContent =
-      "ERROR:\n" + error.message;
+                method: "POST",
 
-  }
+                headers: {
+                    "Content-Type": "application/octet-stream"
+                },
 
-}
+                body: testFile
 
-</script>
+            });
+
+            var responseText = await response.text();
+
+            result.textContent =
+                "HTTP STATUS: " + response.status +
+                "\n\n" +
+                responseText;
+
+        } catch (error) {
+
+            result.textContent =
+                "ERROR:\n" + error.message;
+
+        }
+
+    }
+
+    </script>
 
 </body>
 </html>
