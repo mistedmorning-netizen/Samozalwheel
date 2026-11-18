@@ -1,2 +1,131 @@
-var endpoint =
-"https://webapp.telebothost.com/ownlang/webhook/509194429820984?command=%2Fvup&sig=dea65d1055c4c78603b439ddc8949375e132ce6f1642bfa47cef1e9824c783a8&expires=1795021657&gl=1";
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>آزمایش انتقال فایل باینری</title>
+
+    <style>
+        body {
+            font-family: Tahoma, sans-serif;
+            text-align: center;
+            padding: 25px;
+            background: #f2f2f2;
+        }
+
+        h3 {
+            color: #222;
+        }
+
+        button {
+            padding: 14px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background: #1769aa;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #888;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            direction: ltr;
+            text-align: left;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h3>آزمایش انتقال فایل باینری</h3>
+
+    <p>حجم فایل آزمایشی: ۱۰۰ کیلوبایت</p>
+
+    <button id="sendButton" onclick="sendTest()">
+        ارسال فایل آزمایشی
+    </button>
+
+    <pre id="result">آماده ارسال...</pre>
+
+    <script>
+
+    async function sendTest() {
+
+        var result = document.getElementById("result");
+        var button = document.getElementById("sendButton");
+
+        button.disabled = true;
+
+        result.textContent = "در حال آماده‌سازی فایل...";
+
+        // آدرس جدید وب‌هوک دستور vup
+        var endpoint =
+        "https://webapp.telebothost.com/ownlang/webhook/509194429820984?command=%2Fvup&sig=dea65d1055c4c78603b439ddc8949375e132ce6f1642bfa47cef1e9824c783a8&expires=1795021657&gl=1";
+
+        try {
+
+            // ساخت فایل آزمایشی باینری ۱۰۰ کیلوبایتی
+            var bytes = new Uint8Array(100 * 1024);
+
+            for (var i = 0; i < bytes.length; i++) {
+                bytes[i] = i % 256;
+            }
+
+            var testFile = new Blob(
+                [bytes],
+                {
+                    type: "application/octet-stream"
+                }
+            );
+
+            result.textContent =
+                "در حال ارسال فایل...\n" +
+                "File size: " + testFile.size + " bytes";
+
+            // ارسال فایل به TelebotHost
+            var response = await fetch(endpoint, {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/octet-stream"
+                },
+
+                body: testFile
+
+            });
+
+            var responseText = await response.text();
+
+            result.textContent =
+                "HTTP STATUS: " + response.status +
+                "\n\n" +
+                responseText;
+
+        } catch (error) {
+
+            result.textContent =
+                "ERROR:\n" + error.message;
+
+        } finally {
+
+            button.disabled = false;
+
+        }
+    }
+
+    </script>
+
+</body>
+</html>
