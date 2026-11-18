@@ -1,1 +1,65 @@
 
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VUP Connection Test</title>
+</head>
+
+<body style="font-family:tahoma;text-align:center;padding:30px">
+
+<h3>آزمایش ارتباط با TelebotHost</h3>
+
+<button onclick="sendTest()">
+ارسال پیام آزمایشی
+</button>
+
+<pre id="result" style="direction:ltr;white-space:pre-wrap"></pre>
+
+<script>
+
+async function sendTest() {
+
+  var result = document.getElementById("result");
+
+  result.textContent = "در حال ارسال...";
+
+  var endpoint =
+  "https://webapp.telebothost.com/ownlang/webhook/509194429820984?command=%2Fvup&sig=85207df476e1dfa94d08b84e0349ee358fa060166ad93f6023042523b1d967dd&expires=1795018166&gl=1";
+
+  try {
+
+    var response = await fetch(endpoint, {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        test: true,
+        message: "Hello from Samozalwheel",
+        file_size: 0
+      })
+    });
+
+    var data = await response.text();
+
+    result.textContent =
+      "HTTP STATUS: " + response.status +
+      "\n\n" + data;
+
+  } catch (error) {
+
+    result.textContent =
+      "ERROR:\n" + error.message;
+
+  }
+
+}
+
+</script>
+
+</body>
+</html>
