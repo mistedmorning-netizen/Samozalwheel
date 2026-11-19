@@ -6,10 +6,6 @@
 <meta name="theme-color" content="#09090d">
 <title>گردونه مافیایی | سام و زال</title>
 
-<!-- ==========================================
-     بارگذاری دو مسیره کتابخانه تلگرام
-========================================== -->
-
 <script>
 window.__telegramScriptState = 'loading';
 window.__telegramScriptSource = 'telegram';
@@ -201,6 +197,30 @@ h1{
   font-size:13px;
   line-height:1.8;
 }
+.recording-status{
+  min-height:22px;
+  margin-top:5px;
+  color:#f0ce7a;
+  font-size:11px;
+  line-height:1.8;
+  overflow-wrap:anywhere;
+}
+.recording-download{
+  display:none;
+  margin:10px auto 0;
+  padding:10px 18px;
+  width:max-content;
+  max-width:100%;
+  border:1px solid #d6ad61;
+  border-radius:12px;
+  color:#fff3d8;
+  background:#33221b;
+  text-decoration:none;
+  font-size:12px;
+}
+.recording-download.show{
+  display:block;
+}
 .note{
   text-align:center;
   color:#a89a89;
@@ -299,6 +319,15 @@ footer{
       در حال بررسی اطلاعات راه‌اندازی تلگرام...
     </div>
 
+    <div class="recording-status" id="recordingStatus" aria-live="polite"></div>
+
+    <a
+      class="recording-download"
+      id="recordingDownload"
+      href="#"
+      download="samozal-wheel-test.webm"
+    >⬇️ دانلود فیلم آزمایشی گردونه</a>
+
     <div class="result" id="result" aria-live="polite">
       <div class="result-title" id="resultTitle"></div>
       <div class="result-desc" id="resultDesc"></div>
@@ -347,6 +376,8 @@ const profileMessage=document.getElementById('profileMessage');
 const profileChances=document.getElementById('profileChances');
 const profileGames=document.getElementById('profileGames');
 const status=document.getElementById('status');
+const recordingStatus=document.getElementById('recordingStatus');
+const recordingDownload=document.getElementById('recordingDownload');
 const spinBtn=document.getElementById('spinBtn');
 const result=document.getElementById('result');
 const resultTitle=document.getElementById('resultTitle');
@@ -369,6 +400,520 @@ let spinning=false;
 let currentRotation=0;
 let profileLoaded=false;
 let remainingChances=0;
+
+// ==========================================
+// متغیرهای سیستم ضبط
+// ==========================================
+
+let wheelRecorder=null;
+let wheelRecordChunks=[];
+let wheelAnimationFrame=null;
+let wheelVideoBlob=null;
+let wheelCanvas=null;
+let wheelCanvasContext=null;
+let wheelSvgImage=null;
+let wheelSvgUrl=null;
+let wheelDownloadUrl=null;
+let recordingActive=false;
+
+// ==========================================
+// گزارش خطا و وضعیت ضبط
+// ==========================================
+
+function recordingLog(stage,message,error){
+
+  const timestamp=new Date().toISOString();
+
+  console.log(
+    '[SAMOZAL RECORD]['+stage+']['+timestamp+']',
+    message,
+    error||''
+  );
+}
+
+function setRecordingMessage(message,type){
+
+  recordingStatus.textContent=message;
+
+  if(type==='error'){
+    recordingStatus.style.color='#ff7777';
+  }else if(type==='success'){
+    recordingStatus.style.color='#8de0a5';
+  }else{
+    recordingStatus.style.color='#f0ce7a';
+  }
+}
+
+// ==========================================
+// دریافت زاویه فعلی SVG
+// ==========================================
+
+function getWheelCurrentAngle(){
+
+  try{
+
+    const transform=getComputedStyle(svg).transform;
+
+    if(!transform||transform==='none'){
+      return 0;
+    }
+
+    let matrix;
+
+    if(typeof DOMMatrixReadOnly!=='undefined'){
+      matrix=new DOMMatrixReadOnly(transform);
+    }else if(typeof DOMMatrix!=='undefined'){
+      matrix=new DOMMatrix(transform);
+    }else{
+
+      const values=transform.match(/matrix\(([^)]+)\)/);
+
+      if(!values){
+        throw new Error('خواندن ماتریس چرخش ممکن نیست.');
+      }
+
+      const parts=values[1].split(',').map(Number);
+
+      return Math.atan2(parts[1],parts[0]);
+    }
+
+    return Math.atan2(matrix.b,matrix.a);
+
+  }catch(error){
+
+    recordingLog(
+      'ANGLE ERROR',
+      'خواندن زاویه گردونه ناموفق بود.',
+      error
+    );
+
+    throw error;
+  }
+}
+
+// ==========================================
+// آماده‌سازی تصویر SVG برای ضبط
+// ==========================================
+
+async function prepareWheelRecordingImage(){
+
+  if(!svg){
+    throw new Error('عنصر SVG گردونه پیدا نشد.');
+  }
+
+  if(!svg.querySelector('path')){
+    throw new Error('قسمت‌های گردونه هنوز ساخته نشده‌اند.');
+  }
+
+  const svgClone=svg.cloneNode(true);
+
+  svgClone.setAttribute('xmlns',NS);
+  svgClone.setAttribute('width','500');
+  svgClone.setAttribute('height','500');
+
+  svgClone.removeAttribute('style');
+
+  const svgText=new XMLSerializer().serializeToString(svgClone);
+
+  const svgBlob=new Blob(
+    [svgText],
+    {type:'image/svg+xml;charset=utf-8'}
+  );
+
+  wheelSvgUrl=URL.createObjectURL(svgBlob);
+
+  wheelSvgImage=new Image();
+
+  await new Promise((resolve,reject)=>{
+
+    wheelSvgImage.onload=function(){
+      resolve();
+    };
+
+    wheelSvgImage.onerror=function(){
+      reject(new Error('مرورگر نتوانست تصویر SVG گردونه را آماده کند.'));
+    };
+
+    wheelSvgImage.src=wheelSvgUrl;
+
+  });
+
+  recordingLog(
+    'IMAGE READY',
+    'تصویر SVG گردونه با موفقیت آماده شد.'
+  );
+}
+
+// ==========================================
+// رسم هر فریم گردونه در Canvas
+// ==========================================
+
+function drawWheelRecordingFrame(){
+
+  if(!recordingActive||!wheelCanvasContext||!wheelSvgImage){
+    return;
+  }
+
+  try{
+
+    const angle=getWheelCurrentAngle();
+
+    const ctx=wheelCanvasContext;
+
+    ctx.clearRect(0,0,1000,1000);
+
+    ctx.save();
+
+    ctx.translate(500,500);
+    ctx.rotate(angle);
+
+    ctx.drawImage(
+      wheelSvgImage,
+      -500,
+      -500,
+      1000,
+      1000
+    );
+
+    ctx.restore();
+
+    wheelAnimationFrame=requestAnimationFrame(
+      drawWheelRecordingFrame
+    );
+
+  }catch(error){
+
+    recordingLog(
+      'FRAME ERROR',
+      'خطا در رسم فریم ضبط.',
+      error
+    );
+
+    setRecordingMessage(
+      '❌ خطا هنگام ثبت تصویر گردونه: '+error.message,
+      'error'
+    );
+
+    recordingActive=false;
+
+    if(wheelAnimationFrame){
+      cancelAnimationFrame(wheelAnimationFrame);
+      wheelAnimationFrame=null;
+    }
+  }
+}
+
+// ==========================================
+// شروع ضبط گردونه
+// ==========================================
+
+async function startWheelRecording(){
+
+  if(recordingActive){
+    recordingLog(
+      'START SKIPPED',
+      'ضبط از قبل فعال است.'
+    );
+
+    return false;
+  }
+
+  try{
+
+    setRecordingMessage('⏳ در حال آماده‌سازی سیستم ضبط...');
+
+    recordingLog(
+      'START',
+      'آماده‌سازی ضبط آغاز شد.'
+    );
+
+    if(!window.MediaRecorder){
+      throw new Error('مرورگر از MediaRecorder پشتیبانی نمی‌کند.');
+    }
+
+    if(!HTMLCanvasElement.prototype.captureStream){
+      throw new Error('مرورگر از Canvas Capture Stream پشتیبانی نمی‌کند.');
+    }
+
+    if(typeof URL.createObjectURL!=='function'){
+      throw new Error('ساخت آدرس موقت فایل در مرورگر پشتیبانی نمی‌شود.');
+    }
+
+    wheelCanvas=document.createElement('canvas');
+
+    wheelCanvas.width=1000;
+    wheelCanvas.height=1000;
+
+    wheelCanvasContext=wheelCanvas.getContext('2d');
+
+    if(!wheelCanvasContext){
+      throw new Error('ساخت محیط Canvas ناموفق بود.');
+    }
+
+    await prepareWheelRecordingImage();
+
+    const stream=wheelCanvas.captureStream(30);
+
+    if(!stream){
+      throw new Error('ساخت جریان ویدئویی Canvas ناموفق بود.');
+    }
+
+    let mimeType='';
+
+    if(
+      typeof MediaRecorder.isTypeSupported==='function' &&
+      MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+    ){
+
+      mimeType='video/webm;codecs=vp9';
+
+    }else if(
+      typeof MediaRecorder.isTypeSupported==='function' &&
+      MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+    ){
+
+      mimeType='video/webm;codecs=vp8';
+
+    }else if(
+      typeof MediaRecorder.isTypeSupported!=='function' ||
+      MediaRecorder.isTypeSupported('video/webm')
+    ){
+
+      mimeType='video/webm';
+
+    }else{
+
+      throw new Error('فرمت WebM در مرورگر پشتیبانی نمی‌شود.');
+    }
+
+    wheelRecordChunks=[];
+    wheelVideoBlob=null;
+
+    if(wheelDownloadUrl){
+      URL.revokeObjectURL(wheelDownloadUrl);
+      wheelDownloadUrl=null;
+    }
+
+    recordingDownload.classList.remove('show');
+    recordingDownload.removeAttribute('href');
+
+    wheelRecorder=new MediaRecorder(
+      stream,
+      {mimeType:mimeType}
+    );
+
+    wheelRecorder.ondataavailable=function(event){
+
+      if(event.data&&event.data.size>0){
+
+        wheelRecordChunks.push(event.data);
+
+        recordingLog(
+          'DATA',
+          'داده ضبط دریافت شد: '+event.data.size+' بایت'
+        );
+      }
+    };
+
+    wheelRecorder.onerror=function(event){
+
+      const error=event.error||event;
+
+      recordingLog(
+        'RECORDER ERROR',
+        'خطای داخلی MediaRecorder.',
+        error
+      );
+
+      setRecordingMessage(
+        '❌ خطای ضبط ویدئو: '+(error.message||'خطای نامشخص'),
+        'error'
+      );
+    };
+
+    wheelRecorder.onstart=function(){
+
+      recordingLog(
+        'RECORDER STARTED',
+        'ضبط ویدئو با فرمت '+mimeType+' آغاز شد.'
+      );
+    };
+
+    wheelRecorder.start(250);
+
+    recordingActive=true;
+
+    drawWheelRecordingFrame();
+
+    setRecordingMessage(
+      '🔴 ضبط گردونه فعال شد.'
+    );
+
+    recordingLog(
+      'READY',
+      'ضبط با موفقیت آغاز شد. فرمت: '+mimeType
+    );
+
+    return true;
+
+  }catch(error){
+
+    recordingActive=false;
+
+    if(wheelAnimationFrame){
+      cancelAnimationFrame(wheelAnimationFrame);
+      wheelAnimationFrame=null;
+    }
+
+    if(wheelSvgUrl){
+      URL.revokeObjectURL(wheelSvgUrl);
+      wheelSvgUrl=null;
+    }
+
+    recordingLog(
+      'START ERROR',
+      error.message,
+      error
+    );
+
+    setRecordingMessage(
+      '❌ شروع ضبط ناموفق بود: '+error.message,
+      'error'
+    );
+
+    return false;
+  }
+}
+
+// ==========================================
+// توقف ضبط و ساخت فایل WebM
+// ==========================================
+
+async function stopWheelRecording(){
+
+  return new Promise(resolve=>{
+
+    try{
+
+      if(wheelAnimationFrame){
+        cancelAnimationFrame(wheelAnimationFrame);
+        wheelAnimationFrame=null;
+      }
+
+      recordingActive=false;
+
+      if(!wheelRecorder){
+
+        recordingLog(
+          'STOP',
+          'ضبط‌کننده‌ای برای توقف وجود ندارد.'
+        );
+
+        resolve(null);
+        return;
+      }
+
+      if(wheelRecorder.state==='inactive'){
+
+        recordingLog(
+          'STOP',
+          'ضبط‌کننده قبلاً متوقف شده است.'
+        );
+
+        resolve(wheelVideoBlob);
+        return;
+      }
+
+      setRecordingMessage(
+        '⏳ در حال نهایی‌کردن فایل ویدئو...'
+      );
+
+      wheelRecorder.onstop=function(){
+
+        try{
+
+          wheelVideoBlob=new Blob(
+            wheelRecordChunks,
+            {type:'video/webm'}
+          );
+
+          if(wheelSvgUrl){
+            URL.revokeObjectURL(wheelSvgUrl);
+            wheelSvgUrl=null;
+          }
+
+          if(!wheelVideoBlob||wheelVideoBlob.size===0){
+            throw new Error('فایل ویدئویی ساخته‌شده خالی است.');
+          }
+
+          wheelDownloadUrl=URL.createObjectURL(wheelVideoBlob);
+
+          recordingDownload.href=wheelDownloadUrl;
+          recordingDownload.classList.add('show');
+
+          const sizeMB=(
+            wheelVideoBlob.size/(1024*1024)
+          ).toFixed(2);
+
+          setRecordingMessage(
+            '✅ ضبط موفق بود. حجم فایل: '+sizeMB+' مگابایت',
+            'success'
+          );
+
+          recordingLog(
+            'COMPLETE',
+            'فایل WebM ساخته شد.',
+            {
+              size:wheelVideoBlob.size,
+              sizeMB:sizeMB,
+              mimeType:wheelVideoBlob.type,
+              chunks:wheelRecordChunks.length
+            }
+          );
+
+          resolve(wheelVideoBlob);
+
+        }catch(error){
+
+          recordingLog(
+            'FILE ERROR',
+            error.message,
+            error
+          );
+
+          setRecordingMessage(
+            '❌ ساخت فایل ویدئو ناموفق بود: '+error.message,
+            'error'
+          );
+
+          resolve(null);
+        }
+      };
+
+      wheelRecorder.stop();
+
+      recordingLog(
+        'STOP REQUESTED',
+        'درخواست توقف ضبط ارسال شد.'
+      );
+
+    }catch(error){
+
+      recordingLog(
+        'STOP ERROR',
+        error.message,
+        error
+      );
+
+      setRecordingMessage(
+        '❌ توقف ضبط ناموفق بود: '+error.message,
+        'error'
+      );
+
+      resolve(null);
+    }
+  });
+}
 
 // ==========================================
 // تشخیص و انتظار برای کتابخانه تلگرام
@@ -769,7 +1314,7 @@ async function loadProfile(){
 
 function animateToPrize(prizeCode){
 
-  return new Promise((resolve,reject)=>{
+  return new Promise(async (resolve,reject)=>{
 
     const index=prizes.findIndex(prize=>prize.code===prizeCode);
 
@@ -783,25 +1328,45 @@ function animateToPrize(prizeCode){
     const currentAngle=((currentRotation%360)+360)%360;
     const adjustment=(targetAngle-currentAngle+360)%360;
 
+    // ضبط پیش از آغاز انیمیشن واقعی
+    // شکست ضبط نباید مانع چرخش گردونه شود
+
+    const recordingStarted=await startWheelRecording();
+
+    if(!recordingStarted){
+
+      recordingLog(
+        'ANIMATION CONTINUES',
+        'ضبط آغاز نشد؛ انیمیشن گردونه بدون ضبط ادامه می‌یابد.'
+      );
+    }
+
     currentRotation+=6*360+adjustment;
 
     svg.style.transition='transform 6s cubic-bezier(0.12,0.75,0.12,1)';
 
     let finished=false;
 
-    function finish(){
+    async function finish(){
 
       if(finished) return;
 
       finished=true;
 
       svg.removeEventListener('transitionend',onTransitionEnd);
+
+      if(recordingStarted){
+        await stopWheelRecording();
+      }
+
       resolve();
     }
 
     function onTransitionEnd(event){
 
-      if(event.target===svg) finish();
+      if(event.target===svg){
+        finish();
+      }
     }
 
     svg.addEventListener('transitionend',onTransitionEnd);
@@ -840,6 +1405,8 @@ async function spinWheel(){
   spinBtn.textContent='⏳ در حال چرخش...';
 
   result.classList.remove('show');
+
+  recordingDownload.classList.remove('show');
 
   status.textContent='در حال ثبت چرخش و دریافت جایزه...';
 
