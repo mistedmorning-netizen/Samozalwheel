@@ -288,6 +288,14 @@ h1{
   overflow-wrap:anywhere;
 }
 
+.video-info a{
+  color:#f0ce7a;
+  display:block;
+  margin-top:8px;
+  direction:ltr;
+  overflow-wrap:anywhere;
+}
+
 .note{
   text-align:center;
   color:#a89a89;
@@ -558,6 +566,217 @@ function setRecordingMessage(message,type){
 }
 
 // ==========================================
+// آپلود خودکار فیلم به EasySend
+// ==========================================
+
+async function uploadWheelVideo(blob){
+
+  if(!blob||!blob.size){
+    throw new Error('فایل ضبط‌شده خالی است.');
+  }
+
+  const uploadEndpoint='https://easysend.co/api/v1/upload';
+
+  setRecordingMessage('⏳ در حال آپلود ویدئو به EasySend...');
+
+  recordingLog(
+    'UPLOAD START',
+    'شروع آپلود مستقیم فایل از Mini App.',
+    {
+      size:blob.size,
+      type:blob.type
+    }
+  );
+
+  const formData=new FormData();
+
+  const fileName='samozal-wheel-'+Date.now()+'.webm';
+
+  const videoFile=new File(
+    [blob],
+    fileName,
+    {type:'video/webm'}
+  );
+
+  formData.append('files[]',videoFile);
+
+  let response;
+
+  try{
+
+    response=await fetch(uploadEndpoint,{
+      method:'POST',
+      body:formData
+    });
+
+  }catch(error){
+
+    recordingLog(
+      'UPLOAD NETWORK ERROR',
+      'ارتباط با EasySend برقرار نشد. احتمال خطای CORS یا شبکه.',
+      error
+    );
+
+    throw new Error(
+      'ارتباط با EasySend برقرار نشد؛ احتمال مشکل شبکه یا CORS.'
+    );
+  }
+
+  const responseText=await response.text();
+
+  let data;
+
+  try{
+
+    data=JSON.parse(responseText);
+
+  }catch(error){
+
+    recordingLog(
+      'UPLOAD JSON ERROR',
+      'پاسخ EasySend قابل تبدیل به JSON نیست.',
+      responseText
+    );
+
+    throw new Error(
+      'پاسخ سرور EasySend معتبر نیست.'
+    );
+  }
+
+  if(!response.ok){
+
+    recordingLog(
+      'UPLOAD HTTP ERROR',
+      'خطای HTTP از EasySend.',
+      {
+        status:response.status,
+        data:data
+      }
+    );
+
+    throw new Error(
+      data.message||
+      data.error||
+      'خطای سرور EasySend: '+response.status
+    );
+  }
+
+  if(data.success!==true){
+
+    recordingLog(
+      'UPLOAD FAILED',
+      'سرور آپلود را موفق اعلام نکرد.',
+      data
+    );
+
+    throw new Error(
+      data.message||
+      data.error||
+      'آپلود فایل در EasySend ناموفق بود.'
+    );
+  }
+
+  if(
+    !data.files||
+    !Array.isArray(data.files)||
+    !data.files[0]||
+    !data.files[0].download_url
+  ){
+
+    recordingLog(
+      'UPLOAD RESPONSE ERROR',
+      'لینک مستقیم در پاسخ سرور پیدا نشد.',
+      data
+    );
+
+    throw new Error(
+      'آپلود انجام شد اما لینک مستقیم فایل در پاسخ وجود ندارد.'
+    );
+  }
+
+  const downloadUrl=new URL(
+    data.files[0].download_url,
+    'https://easysend.co'
+  ).href;
+
+  const shareLink=data.share_link
+    ?new URL(data.share_link,'https://easysend.co').href
+    :'';
+
+  recordingLog(
+    'UPLOAD SUCCESS',
+    'آپلود و دریافت لینک مستقیم موفق بود.',
+    {
+      downloadUrl:downloadUrl,
+      shareLink:shareLink,
+      fileName:data.files[0].name,
+      fileSize:data.files[0].size
+    }
+  );
+
+  return {
+    downloadUrl:downloadUrl,
+    shareLink:shareLink,
+    fileName:data.files[0].name||fileName,
+    fileSize:data.files[0].size||blob.size,
+    expiresAt:data.expires_at||null
+  };
+}
+
+// ==========================================
+// نمایش لینک آپلود موفق برای آزمایش
+// ==========================================
+
+function showUploadedVideo(uploadResult){
+
+  videoInfo.textContent=
+    'حجم فایل: '+
+    (wheelVideoBlob.size/(1024*1024)).toFixed(2)+
+    ' مگابایت | فرمت: WebM';
+
+  const link=document.createElement('a');
+
+  link.href=uploadResult.downloadUrl;
+  link.target='_blank';
+  link.rel='noopener noreferrer';
+  link.textContent='🔗 باز کردن لینک مستقیم فیلم آپلودشده';
+
+  videoInfo.appendChild(link);
+
+  const copyButton=document.createElement('button');
+
+  copyButton.type='button';
+  copyButton.textContent='کپی لینک مستقیم';
+
+  copyButton.style.cssText=
+    'display:block;margin:10px auto 0;padding:9px 18px;border-radius:10px;border:1px solid #d6ad61;background:#33221b;color:#fff3d8;font-family:Tahoma;cursor:pointer;';
+
+  copyButton.addEventListener('click',async function(){
+
+    try{
+
+      await navigator.clipboard.writeText(
+        uploadResult.downloadUrl
+      );
+
+      copyButton.textContent='✅ لینک کپی شد';
+
+    }catch(error){
+
+      recordingLog(
+        'COPY ERROR',
+        'کپی لینک ناموفق بود.',
+        error
+      );
+
+      copyButton.textContent='❌ کپی خودکار ممکن نیست';
+    }
+  });
+
+  videoInfo.appendChild(copyButton);
+}
+
+// ==========================================
 // دریافت زاویه واقعی گردونه
 // ==========================================
 
@@ -671,13 +890,8 @@ function drawWheelRecordingFrame(){
 
   ctx.clearRect(0,0,1000,1000);
 
-  // پس‌زمینه تیره
-
   ctx.fillStyle='#09090d';
-
   ctx.fillRect(0,0,1000,1000);
-
-  // قاب طلایی بیرونی
 
   const rimGradient=ctx.createLinearGradient(
     100,100,900,900
@@ -694,14 +908,10 @@ function drawWheelRecordingFrame(){
   ctx.fillStyle=rimGradient;
   ctx.fill();
 
-  // حلقه داخلی
-
   ctx.beginPath();
   ctx.arc(500,500,472,0,Math.PI*2);
   ctx.fillStyle='#171015';
   ctx.fill();
-
-  // رسم SVG واقعی گردونه با زاویه جاری
 
   ctx.save();
 
@@ -717,8 +927,6 @@ function drawWheelRecordingFrame(){
   );
 
   ctx.restore();
-
-  // عقربه بالای گردونه
 
   ctx.save();
 
@@ -751,8 +959,6 @@ function drawWheelRecordingFrame(){
 
   ctx.restore();
 
-  // قسمت مرکزی گردونه
-
   const hubGradient=ctx.createRadialGradient(
     465,455,10,
     500,500,100
@@ -776,21 +982,18 @@ function drawWheelRecordingFrame(){
   ctx.strokeStyle='#a67b37';
   ctx.stroke();
 
-  // نوشته مرکزی
-
   ctx.textAlign='center';
   ctx.textBaseline='middle';
 
   ctx.fillStyle='#f0ce7a';
   ctx.font='bold 31px Tahoma,Arial,sans-serif';
-
   ctx.fillText('♠',500,458);
+
   ctx.font='bold 25px Tahoma,Arial,sans-serif';
   ctx.fillText('سام و زال',500,500);
 
   ctx.font='bold 31px Tahoma,Arial,sans-serif';
   ctx.fillText('♣',500,542);
-
 }
 
 // ==========================================
@@ -848,8 +1051,6 @@ function getSupportedVideoMimeType(){
   if(typeof MediaRecorder.isTypeSupported!=='function'){
     return '';
   }
-
-  // اولویت VP8 برای سازگاری بهتر با Android
 
   const formats=[
     'video/webm;codecs=vp8',
@@ -946,11 +1147,7 @@ async function startWheelRecording(){
 
     await prepareWheelRecordingImage();
 
-    // رسم اولین فریم پیش از آغاز ضبط
-
     drawWheelRecordingFrame();
-
-    // بررسی اینکه تصویر واقعاً روی Canvas رسم شده است
 
     const sample=wheelCanvasContext.getImageData(
       500,
@@ -959,9 +1156,7 @@ async function startWheelRecording(){
       1
     ).data;
 
-    if(
-      sample[3]===0
-    ){
+    if(sample[3]===0){
       throw new Error('Canvas تصویر قابل مشاهده ندارد.');
     }
 
@@ -1021,8 +1216,6 @@ async function startWheelRecording(){
       );
     };
 
-    // یک فرصت برای ثبت اولین فریم در جریان ویدئو
-
     await new Promise(resolve=>{
       requestAnimationFrame(resolve);
     });
@@ -1077,7 +1270,7 @@ async function startWheelRecording(){
 }
 
 // ==========================================
-// توقف ضبط و ساخت فایل
+// توقف ضبط و ساخت فایل و آپلود
 // ==========================================
 
 async function stopWheelRecording(){
@@ -1107,7 +1300,7 @@ async function stopWheelRecording(){
 
       setRecordingMessage('⏳ در حال نهایی‌کردن فیلم...');
 
-      wheelRecorder.onstop=function(){
+      wheelRecorder.onstop=async function(){
 
         try{
 
@@ -1119,8 +1312,6 @@ async function stopWheelRecording(){
           if(!wheelVideoBlob||wheelVideoBlob.size===0){
             throw new Error('فایل ویدئویی خالی است.');
           }
-
-          // بستن جریان ضبط
 
           if(recordingStream){
 
@@ -1136,7 +1327,7 @@ async function stopWheelRecording(){
             wheelSvgUrl=null;
           }
 
-          // ساخت لینک دانلود
+          // پیش‌نمایش محلی برای مرحله آزمایش
 
           wheelDownloadUrl=URL.createObjectURL(wheelVideoBlob);
 
@@ -1146,8 +1337,6 @@ async function stopWheelRecording(){
 
           recordingDownload.download=
             'samozal-wheel-'+Date.now()+'.webm';
-
-          // ساخت لینک مستقل برای پخش فیلم
 
           wheelPreviewUrl=URL.createObjectURL(wheelVideoBlob);
 
@@ -1164,11 +1353,6 @@ async function stopWheelRecording(){
           videoInfo.textContent=
             'حجم فایل: '+sizeMB+' مگابایت | فرمت: WebM';
 
-          setRecordingMessage(
-            '✅ ضبط موفق بود. حجم فایل: '+sizeMB+' مگابایت',
-            'success'
-          );
-
           recordingLog(
             'COMPLETE',
             'فایل ویدئویی ساخته شد.',
@@ -1178,6 +1362,42 @@ async function stopWheelRecording(){
               chunks:wheelRecordChunks.length
             }
           );
+
+          // آپلود مستقیم همان Blob به EasySend
+
+          try{
+
+            const uploadResult=await uploadWheelVideo(
+              wheelVideoBlob
+            );
+
+            showUploadedVideo(uploadResult);
+
+            setRecordingMessage(
+              '✅ آپلود کامل شد. لینک مستقیم دریافت شد.',
+              'success'
+            );
+
+            recordingLog(
+              'UPLOAD COMPLETE',
+              'لینک مستقیم آماده انتقال به مرحله بعد است.',
+              uploadResult
+            );
+
+          }catch(uploadError){
+
+            recordingLog(
+              'UPLOAD FINAL ERROR',
+              uploadError.message,
+              uploadError
+            );
+
+            setRecordingMessage(
+              '❌ آپلود ناموفق بود: '+uploadError.message,
+              'error'
+            );
+
+          }
 
           resolve(wheelVideoBlob);
 
@@ -1663,8 +1883,6 @@ function animateToPrize(prizeCode){
 
     const adjustment=
       (targetAngle-currentAngle+360)%360;
-
-    // شروع ضبط پیش از انیمیشن
 
     const recordingStarted=
       await startWheelRecording();
