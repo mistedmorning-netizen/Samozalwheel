@@ -12,7 +12,6 @@ window.__telegramScriptSource = 'telegram';
 window.__telegramFallbackStarted = false;
 
 window.__loadTelegramFallback = function(){
-
   if(window.__telegramFallbackStarted) return;
 
   window.__telegramFallbackStarted = true;
@@ -22,7 +21,6 @@ window.__loadTelegramFallback = function(){
   console.warn('Telegram CDN failed. Trying GitHub fallback.');
 
   var script = document.createElement('script');
-
   script.src = 'https://mistedmorning-netizen.github.io/Samozalwheel/telegram-web-app.js';
 
   script.onload = function(){
@@ -40,9 +38,9 @@ window.__loadTelegramFallback = function(){
 </script>
 
 <script
-  src="https://telegram.org/js/telegram-web-app.js"
-  onload="window.__telegramScriptState='loaded';"
-  onerror="window.__loadTelegramFallback();"
+src="https://telegram.org/js/telegram-web-app.js"
+onload="window.__telegramScriptState='loaded';"
+onerror="window.__loadTelegramFallback();"
 ></script>
 
 <style>
@@ -144,7 +142,6 @@ h1{
   display:block;
   border-radius:50%;
   transform:rotate(0deg);
-  overflow:visible;
 }
 
 .pointer{
@@ -340,85 +337,6 @@ footer{
 .result-title{font-size:18px;color:var(--gold);font-weight:bold}
 .result-desc{font-size:12px;color:#e8d8bd;margin-top:8px;line-height:1.9}
 
-/* ==========================================
-   افکت خانه برنده در SVG
-   ========================================== */
-
-.winner-slice{
-  animation:winnerSlicePulse .65s ease-in-out infinite alternate;
-  transform-box:fill-box;
-  transform-origin:center;
-}
-
-.winner-label{
-  animation:winnerLabelPulse .55s ease-in-out infinite alternate;
-  transform-box:fill-box;
-  transform-origin:center;
-}
-
-.winner-label text{
-  fill:#fff4b5;
-  stroke:#6b3000;
-  stroke-width:3.5;
-  filter:drop-shadow(0 0 5px #ffd65c) drop-shadow(0 0 12px #ffae00);
-}
-
-#winnerEffect{
-  pointer-events:none;
-}
-
-.winner-wedge{
-  fill:#ffd65c;
-  fill-opacity:.24;
-  stroke:#fff0a3;
-  stroke-width:5;
-  filter:drop-shadow(0 0 9px #ffc43d);
-  animation:winnerWedgePulse .45s ease-in-out infinite alternate;
-}
-
-.winner-ring{
-  fill:none;
-  stroke:#ffe69a;
-  stroke-width:5;
-  filter:drop-shadow(0 0 7px #ffb700);
-  animation:winnerRingBurst 1.1s ease-out infinite;
-  transform-box:fill-box;
-  transform-origin:center;
-}
-
-.winner-ray{
-  stroke:#ffe49a;
-  stroke-width:5;
-  stroke-linecap:round;
-  filter:drop-shadow(0 0 5px #ffb700);
-  animation:winnerRayFlash .55s ease-in-out infinite alternate;
-}
-
-@keyframes winnerSlicePulse{
-  from{filter:brightness(1) drop-shadow(0 0 3px #ffd65c)}
-  to{filter:brightness(1.8) drop-shadow(0 0 16px #ffbf36)}
-}
-
-@keyframes winnerLabelPulse{
-  from{scale:1}
-  to{scale:1.22}
-}
-
-@keyframes winnerWedgePulse{
-  from{fill-opacity:.14;stroke-width:4}
-  to{fill-opacity:.38;stroke-width:8}
-}
-
-@keyframes winnerRingBurst{
-  0%{opacity:1;scale:.45}
-  100%{opacity:0;scale:1.8}
-}
-
-@keyframes winnerRayFlash{
-  from{opacity:.45;stroke-width:3}
-  to{opacity:1;stroke-width:7}
-}
-
 @media(max-width:380px){
   .rim{padding:5px}
 
@@ -432,7 +350,6 @@ footer{
 </head>
 
 <body>
-
 <div class="wrap">
 
 <header>
@@ -454,7 +371,6 @@ footer{
 <main class="panel">
 
   <div class="stage" aria-label="گردونهٔ ۱۲ بخشی">
-
     <div class="rim">
       <svg id="wheel" viewBox="0 0 500 500" role="img" aria-label="گردونه با ۱۲ جایزه"></svg>
     </div>
@@ -468,7 +384,6 @@ footer{
         <span class="suits">♣</span>
       </div>
     </div>
-
   </div>
 
   <div class="controls">
@@ -491,7 +406,6 @@ footer{
     >⬇️ دانلود فیلم گردونه</a>
 
     <div class="video-preview" id="videoPreview">
-
       <div class="video-preview-title">
         🎬 پیش‌نمایش فیلم چرخش گردونه
       </div>
@@ -505,7 +419,6 @@ footer{
       ></video>
 
       <div class="video-info" id="videoInfo"></div>
-
     </div>
 
     <div class="result" id="result" aria-live="polite">
@@ -592,18 +505,14 @@ let profileLoaded=false;
 let remainingChances=0;
 
 // ==========================================
-// متغیرهای افکت برنده
+// وضعیت افکت برنده
 // ==========================================
 
-let wheelSlicesGroup=null;
-let wheelSlicePaths=[];
-let wheelSliceLabels=[];
+let winnerEffect=null;
+let winnerEffectFrame=null;
 let winnerEffectGroup=null;
 
-let winnerEffectIndex=-1;
-let winnerEffectStart=0;
-
-const WINNER_EFFECT_DURATION=2200;
+const WINNER_EFFECT_DURATION=2300;
 
 // ==========================================
 // متغیرهای ضبط
@@ -611,9 +520,7 @@ const WINNER_EFFECT_DURATION=2200;
 
 let wheelRecorder=null;
 let wheelRecordChunks=[];
-
 let wheelAnimationFrame=null;
-
 let wheelVideoBlob=null;
 
 let wheelCanvas=null;
@@ -626,7 +533,6 @@ let wheelDownloadUrl=null;
 let wheelPreviewUrl=null;
 
 let recordingActive=false;
-
 let recordingStream=null;
 
 // ==========================================
@@ -634,7 +540,6 @@ let recordingStream=null;
 // ==========================================
 
 function recordingLog(stage,message,error){
-
   console.log(
     '[SAMOZAL RECORD]['+stage+']',
     message,
@@ -643,7 +548,6 @@ function recordingLog(stage,message,error){
 }
 
 function setRecordingMessage(message,type){
-
   recordingStatus.textContent=message;
 
   if(type==='error'){
@@ -653,6 +557,368 @@ function setRecordingMessage(message,type){
   }else{
     recordingStatus.style.color='#f0ce7a';
   }
+}
+
+// ==========================================
+// مدیریت افکت برنده در SVG
+// ==========================================
+
+function clearWinnerEffect(){
+
+  winnerEffect=null;
+
+  if(winnerEffectFrame){
+    cancelAnimationFrame(winnerEffectFrame);
+    winnerEffectFrame=null;
+  }
+
+  if(winnerEffectGroup){
+    winnerEffectGroup.remove();
+    winnerEffectGroup=null;
+  }
+}
+
+function createWinnerEffect(index){
+
+  clearWinnerEffect();
+
+  const start=index*30;
+  const end=start+30;
+  const middle=start+15;
+
+  const [x1,y1]=point(239,start);
+  const [x2,y2]=point(239,end);
+  const [tx,ty]=point(154,middle);
+
+  winnerEffect={
+    index:index,
+    startTime:performance.now()
+  };
+
+  winnerEffectGroup=el('g',{
+    id:'winnerEffect',
+    'pointer-events':'none'
+  });
+
+  // پوشش طلایی روی خانه انتخاب‌شده
+
+  winnerEffectGroup.appendChild(el('path',{
+    d:`M 250 250 L ${x1} ${y1} A 239 239 0 0 1 ${x2} ${y2} Z`,
+    fill:'#ffd76a',
+    'fill-opacity':'.28',
+    stroke:'#fff0ad',
+    'stroke-width':'5',
+    filter:'url(#winnerGlow)'
+  }));
+
+  // تعریف درخشش
+
+  const defs=el('defs');
+
+  const filter=el('filter',{
+    id:'winnerGlow',
+    x:'-80%',
+    y:'-80%',
+    width:'260%',
+    height:'260%'
+  });
+
+  filter.appendChild(el('feGaussianBlur',{
+    stdDeviation:'5',
+    result:'blur'
+  }));
+
+  const merge=el('feMerge');
+  merge.appendChild(el('feMergeNode',{in:'blur'}));
+  merge.appendChild(el('feMergeNode',{in:'SourceGraphic'}));
+  filter.appendChild(merge);
+  defs.appendChild(filter);
+  winnerEffectGroup.appendChild(defs);
+
+  // حلقه‌های انفجاری اطراف نوشته جایزه
+
+  for(let i=0;i<3;i++){
+
+    winnerEffectGroup.appendChild(el('circle',{
+      class:'winner-pulse',
+      cx:tx,
+      cy:ty,
+      r:18,
+      fill:'none',
+      stroke:i===1?'#fff4bd':'#ffd45c',
+      'stroke-width':i===1?'3':'2',
+      'stroke-opacity':'.95',
+      'data-pulse':i
+    }));
+
+  }
+
+  // ذرات انفجاری طلایی
+
+  for(let i=0;i<16;i++){
+
+    const angle=(Math.PI*2*i)/16;
+    const distance=25+(i%3)*7;
+
+    const sx=tx+Math.cos(angle)*distance;
+    const sy=ty+Math.sin(angle)*distance;
+
+    winnerEffectGroup.appendChild(el('path',{
+      class:'winner-particle',
+      d:'M 0 -7 L 4 0 L 0 7 L -4 0 Z',
+      fill:i%2===0?'#fff2b0':'#ffca4c',
+      transform:`translate(${sx} ${sy}) scale(.8)`,
+      'data-angle':angle,
+      'data-x':tx,
+      'data-y':ty,
+      'data-distance':distance
+    }));
+
+  }
+
+  // کپی نوشته جایزه برای درخشش و بزرگ‌شدن
+
+  const originalLabel=svg.querySelector(
+    `[data-label-index="${index}"]`
+  );
+
+  if(originalLabel){
+
+    const highlightedLabel=originalLabel.cloneNode(true);
+
+    highlightedLabel.setAttribute('class','winner-label');
+    highlightedLabel.setAttribute(
+      'transform',
+      `translate(${tx} ${ty}) rotate(${middle>90&&middle<270?middle+180:middle})`
+    );
+
+    highlightedLabel.querySelectorAll('text').forEach(text=>{
+      text.setAttribute('fill','#fff8d7');
+      text.setAttribute('stroke','#8b4d0b');
+      text.setAttribute('stroke-width','4');
+      text.setAttribute('filter','url(#winnerGlow)');
+    });
+
+    winnerEffectGroup.appendChild(highlightedLabel);
+  }
+
+  svg.appendChild(winnerEffectGroup);
+
+  updateWinnerEffectVisual(0);
+  runWinnerEffectAnimation();
+}
+
+function updateWinnerEffectVisual(progress){
+
+  if(!winnerEffectGroup||!winnerEffect) return;
+
+  const t=Math.max(0,Math.min(1,progress));
+
+  const pulseNodes=winnerEffectGroup.querySelectorAll('.winner-pulse');
+
+  pulseNodes.forEach((node,index)=>{
+
+    const phase=(t*2.5+index/3)%1;
+    const radius=18+phase*75;
+
+    node.setAttribute('r',radius);
+    node.setAttribute('stroke-opacity',Math.max(.05,1-phase));
+    node.setAttribute('stroke-width',Math.max(1,4-phase*3));
+  });
+
+  const particles=winnerEffectGroup.querySelectorAll('.winner-particle');
+
+  particles.forEach(node=>{
+
+    const angle=Number(node.getAttribute('data-angle'));
+    const cx=Number(node.getAttribute('data-x'));
+    const cy=Number(node.getAttribute('data-y'));
+    const distance=Number(node.getAttribute('data-distance'));
+
+    const travel=distance+(t*65);
+    const x=cx+Math.cos(angle)*travel;
+    const y=cy+Math.sin(angle)*travel;
+
+    const scale=Math.max(.05,1-t*.8);
+
+    node.setAttribute(
+      'transform',
+      `translate(${x} ${y}) scale(${scale}) rotate(${t*180})`
+    );
+
+    node.setAttribute(
+      'opacity',
+      Math.max(.08,1-t*.75)
+    );
+  });
+
+  const label=winnerEffectGroup.querySelector('.winner-label');
+
+  if(label){
+
+    const scale=1+Math.sin(Math.min(1,t*3)*Math.PI)*.16;
+
+    label.style.transformBox='fill-box';
+    label.style.transformOrigin='center';
+    label.style.transform=`scale(${scale})`;
+    label.style.filter='drop-shadow(0 0 8px #ffd75c)';
+  }
+
+  winnerEffectGroup.setAttribute(
+    'opacity',
+    t<.12 ? Math.max(.2,t/.12) : 1
+  );
+}
+
+function runWinnerEffectAnimation(){
+
+  if(!winnerEffect) return;
+
+  const elapsed=performance.now()-winnerEffect.startTime;
+  const progress=Math.min(1,elapsed/WINNER_EFFECT_DURATION);
+
+  updateWinnerEffectVisual(progress);
+
+  if(progress<1){
+
+    winnerEffectFrame=requestAnimationFrame(
+      runWinnerEffectAnimation
+    );
+
+  }else{
+
+    winnerEffectFrame=null;
+    updateWinnerEffectVisual(1);
+  }
+}
+
+// ==========================================
+// رسم افکت برنده روی Canvas فیلم
+// ==========================================
+
+function drawWinnerEffectOnCanvas(ctx){
+
+  if(!winnerEffect) return;
+
+  const elapsed=performance.now()-winnerEffect.startTime;
+
+  const progress=Math.max(
+    0,
+    Math.min(1,elapsed/WINNER_EFFECT_DURATION)
+  );
+
+  const index=winnerEffect.index;
+
+  const middle=(index*30+15-90)*Math.PI/180;
+  const start=middle-(15*Math.PI/180);
+  const end=middle+(15*Math.PI/180);
+
+  // مقیاس Canvas نسبت به SVG
+
+  const wheelScale=940/500;
+  const labelRadius=154*wheelScale;
+
+  const labelX=Math.cos(middle)*labelRadius;
+  const labelY=Math.sin(middle)*labelRadius;
+
+  ctx.save();
+
+  ctx.translate(500,500);
+  ctx.rotate(getWheelCurrentAngle());
+
+  // درخشش طلایی خانه برنده
+
+  ctx.save();
+
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.arc(0,0,470,start,end);
+  ctx.closePath();
+
+  ctx.fillStyle='rgba(255,211,91,0.30)';
+  ctx.shadowColor='#ffe18a';
+  ctx.shadowBlur=32;
+  ctx.fill();
+
+  ctx.lineWidth=8;
+  ctx.strokeStyle='rgba(255,239,174,0.95)';
+  ctx.stroke();
+
+  ctx.restore();
+
+  // حلقه‌های انفجاری اطراف نوشته جایزه
+
+  for(let i=0;i<3;i++){
+
+    const phase=(progress*2.5+i/3)%1;
+    const radius=(18+phase*75)*wheelScale;
+
+    ctx.beginPath();
+    ctx.arc(labelX,labelY,radius,0,Math.PI*2);
+
+    ctx.strokeStyle=i===1
+      ?`rgba(255,245,190,${Math.max(.05,1-phase)})`
+      :`rgba(255,207,76,${Math.max(.05,1-phase)})`;
+
+    ctx.lineWidth=Math.max(2,7-phase*5);
+    ctx.shadowColor='#ffdb70';
+    ctx.shadowBlur=18;
+    ctx.stroke();
+  }
+
+  // ذرات انفجاری
+
+  for(let i=0;i<16;i++){
+
+    const particleAngle=(Math.PI*2*i)/16;
+    const baseDistance=(25+(i%3)*7)*wheelScale;
+    const travel=baseDistance+(progress*65*wheelScale);
+
+    const x=labelX+Math.cos(particleAngle)*travel;
+    const y=labelY+Math.sin(particleAngle)*travel;
+
+    const alpha=Math.max(.08,1-progress*.75);
+    const size=5*(1-progress*.8);
+
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(progress*Math.PI);
+
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=i%2===0?'#fff2b0':'#ffca4c';
+    ctx.shadowColor='#ffd75c';
+    ctx.shadowBlur=16;
+
+    ctx.beginPath();
+    ctx.moveTo(0,-size);
+    ctx.lineTo(size*.55,0);
+    ctx.lineTo(0,size);
+    ctx.lineTo(-size*.55,0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // برجسته‌کردن نوشته جایزه
+
+  const scale=1+Math.sin(Math.min(1,progress*3)*Math.PI)*.16;
+
+  ctx.save();
+  ctx.translate(labelX,labelY);
+  ctx.scale(scale,scale);
+
+  ctx.shadowColor='#fff0a0';
+  ctx.shadowBlur=24;
+  ctx.strokeStyle='#fff0b5';
+  ctx.lineWidth=5;
+  ctx.beginPath();
+  ctx.arc(0,0,31*wheelScale,0,Math.PI*2);
+  ctx.stroke();
+
+  ctx.restore();
+
+  ctx.restore();
 }
 
 // ==========================================
@@ -728,9 +994,7 @@ async function uploadWheelVideo(blob){
       responseText
     );
 
-    throw new Error(
-      'پاسخ سرور EasySend معتبر نیست.'
-    );
+    throw new Error('پاسخ سرور EasySend معتبر نیست.');
   }
 
   if(!response.ok){
@@ -934,6 +1198,7 @@ function showUploadedVideo(uploadResult){
 
       copyButton.textContent='❌ کپی خودکار ممکن نیست';
     }
+
   });
 
   videoInfo.appendChild(copyButton);
@@ -956,9 +1221,13 @@ function getWheelCurrentAngle(){
     let matrix;
 
     if(typeof DOMMatrixReadOnly!=='undefined'){
+
       matrix=new DOMMatrixReadOnly(transform);
+
     }else if(typeof DOMMatrix!=='undefined'){
+
       matrix=new DOMMatrix(transform);
+
     }else{
 
       const match=transform.match(/matrix\(([^)]+)\)/);
@@ -976,7 +1245,11 @@ function getWheelCurrentAngle(){
 
   }catch(error){
 
-    recordingLog('ANGLE ERROR','خواندن زاویه ناموفق بود.',error);
+    recordingLog(
+      'ANGLE ERROR',
+      'خواندن زاویه ناموفق بود.',
+      error
+    );
 
     throw error;
   }
@@ -1004,6 +1277,15 @@ async function prepareWheelRecordingImage(){
 
   svgClone.removeAttribute('style');
 
+  // افکت برنده در Canvas جداگانه رسم می‌شود.
+  // بنابراین نسخه ثابت SVG بدون افکت ذخیره می‌شود.
+
+  const cloneEffect=svgClone.querySelector('#winnerEffect');
+
+  if(cloneEffect){
+    cloneEffect.remove();
+  }
+
   const svgText=new XMLSerializer().serializeToString(svgClone);
 
   const svgBlob=new Blob(
@@ -1024,7 +1306,6 @@ async function prepareWheelRecordingImage(){
     };
 
     wheelSvgImage.src=wheelSvgUrl;
-
   });
 
   if(!wheelSvgImage.naturalWidth||!wheelSvgImage.naturalHeight){
@@ -1038,165 +1319,6 @@ async function prepareWheelRecordingImage(){
 }
 
 // ==========================================
-// رسم افکت برنده روی Canvas ضبط
-// ==========================================
-
-function drawCanvasWinnerEffect(ctx,index){
-
-  if(index<0||index>=prizes.length) return;
-
-  const elapsed=performance.now()-winnerEffectStart;
-
-  if(elapsed<0||elapsed>WINNER_EFFECT_DURATION) return;
-
-  const progress=elapsed/WINNER_EFFECT_DURATION;
-  const pulse=.5+.5*Math.sin(elapsed/75);
-
-  const startAngle=(index*30-90)*Math.PI/180;
-  const endAngle=((index+1)*30-90)*Math.PI/180;
-  const middleAngle=(index*30+15-90)*Math.PI/180;
-
-  const centerX=Math.cos(middleAngle)*160;
-  const centerY=Math.sin(middleAngle)*160;
-
-  ctx.save();
-
-  // روشن شدن سطح خانه برنده
-
-  ctx.beginPath();
-  ctx.moveTo(0,0);
-  ctx.arc(0,0,450,startAngle,endAngle);
-  ctx.closePath();
-
-  ctx.fillStyle='rgba(255,210,75,'+(0.12+0.15*pulse)+')';
-  ctx.fill();
-
-  ctx.strokeStyle='rgba(255,239,170,'+(0.7+0.3*pulse)+')';
-  ctx.lineWidth=5+3*pulse;
-  ctx.shadowColor='#ffc43d';
-  ctx.shadowBlur=22;
-  ctx.stroke();
-
-  // حلقه انفجاری اطراف خانه
-
-  ctx.save();
-
-  ctx.translate(centerX,centerY);
-
-  const ringRadius=18+progress*75;
-
-  ctx.beginPath();
-  ctx.arc(0,0,ringRadius,0,Math.PI*2);
-
-  ctx.strokeStyle='rgba(255,225,140,'+(1-progress)+')';
-  ctx.lineWidth=7*(1-progress)+1;
-  ctx.shadowColor='#ffc43d';
-  ctx.shadowBlur=18;
-  ctx.stroke();
-
-  // حلقه دوم
-
-  const secondRadius=10+Math.max(0,progress-.2)*100;
-
-  ctx.beginPath();
-  ctx.arc(0,0,secondRadius,0,Math.PI*2);
-
-  ctx.strokeStyle='rgba(255,185,50,'+(1-progress)+')';
-  ctx.lineWidth=4;
-  ctx.stroke();
-
-  // پرتوهای انفجار
-
-  for(let i=0;i<12;i++){
-
-    const rayAngle=(Math.PI*2*i)/12+(elapsed/500);
-
-    const inner=35;
-    const outer=55+progress*35;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-      Math.cos(rayAngle)*inner,
-      Math.sin(rayAngle)*inner
-    );
-
-    ctx.lineTo(
-      Math.cos(rayAngle)*outer,
-      Math.sin(rayAngle)*outer
-    );
-
-    ctx.strokeStyle='rgba(255,230,150,'+(1-progress*.8)+')';
-    ctx.lineWidth=3+2*pulse;
-    ctx.stroke();
-  }
-
-  // ذرات نورانی
-
-  for(let i=0;i<10;i++){
-
-    const particleAngle=(Math.PI*2*i)/10+(elapsed/350);
-    const distance=45+progress*45;
-
-    const px=Math.cos(particleAngle)*distance;
-    const py=Math.sin(particleAngle)*distance;
-
-    ctx.beginPath();
-    ctx.arc(px,py,2+3*(1-progress),0,Math.PI*2);
-
-    ctx.fillStyle='rgba(255,239,170,'+(1-progress)+')';
-    ctx.fill();
-  }
-
-  ctx.restore();
-
-  // برجسته‌کردن متن جایزه در خود خانه
-
-  const prize=prizes[index];
-
-  let textRotation=index*30+15;
-
-  if(textRotation>90&&textRotation<270){
-    textRotation+=180;
-  }
-
-  const labelX=Math.cos(middleAngle)*154;
-  const labelY=Math.sin(middleAngle)*154;
-
-  ctx.save();
-
-  ctx.translate(labelX,labelY);
-  ctx.rotate(textRotation*Math.PI/180);
-
-  const scale=1.12+.12*pulse;
-
-  ctx.scale(scale,scale);
-
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-  ctx.font='bold 23px Tahoma,Arial,sans-serif';
-
-  ctx.shadowColor='#ffd65c';
-  ctx.shadowBlur=18;
-
-  ctx.lineWidth=5;
-  ctx.strokeStyle='#5b2600';
-
-  ctx.fillStyle='#fff3ad';
-
-  prize.label.forEach((line,lineIndex)=>{
-
-    const y=(lineIndex===0?-12:14);
-
-    ctx.strokeText(line,0,y);
-    ctx.fillText(line,0,y);
-  });
-
-  ctx.restore();
-  ctx.restore();
-}
-
-// ==========================================
 // رسم قاب طلایی و گردونه روی Canvas
 // ==========================================
 
@@ -1207,7 +1329,6 @@ function drawWheelRecordingFrame(){
   }
 
   const ctx=wheelCanvasContext;
-
   const angle=getWheelCurrentAngle();
 
   ctx.clearRect(0,0,1000,1000);
@@ -1248,13 +1369,10 @@ function drawWheelRecordingFrame(){
     940
   );
 
-  // افکت خانه برنده در همان مختصات گردونه
-
-  if(winnerEffectIndex!==-1){
-    drawCanvasWinnerEffect(ctx,winnerEffectIndex);
-  }
-
   ctx.restore();
+
+  // رسم افکت برنده روی همان قطاع در فیلم
+  drawWinnerEffectOnCanvas(ctx);
 
   // نشانگر بالای گردونه
 
@@ -1329,7 +1447,7 @@ function drawWheelRecordingFrame(){
 }
 
 // ==========================================
-// حلقه رسم فریم‌ها
+// شروع حلقه رسم فریم‌ها
 // ==========================================
 
 function recordingFrameLoop(){
@@ -1400,7 +1518,11 @@ function getSupportedVideoMimeType(){
 
     }catch(error){
 
-      recordingLog('FORMAT CHECK','بررسی فرمت ناموفق بود.',error);
+      recordingLog(
+        'FORMAT CHECK',
+        'بررسی فرمت ناموفق بود.',
+        error
+      );
     }
   }
 
@@ -1501,7 +1623,6 @@ async function startWheelRecording(){
     recordingStream=stream;
 
     const mimeType=getSupportedVideoMimeType();
-
     const options=mimeType?{mimeType}:undefined;
 
     wheelRecorder=new MediaRecorder(
@@ -1619,13 +1740,11 @@ async function stopWheelRecording(){
       }
 
       if(!wheelRecorder){
-
         resolve(null);
         return;
       }
 
       if(wheelRecorder.state==='inactive'){
-
         resolve(wheelVideoBlob);
         return;
       }
@@ -1664,7 +1783,6 @@ async function stopWheelRecording(){
           wheelDownloadUrl=URL.createObjectURL(wheelVideoBlob);
 
           recordingDownload.href=wheelDownloadUrl;
-
           recordingDownload.classList.add('show');
 
           recordingDownload.download=
@@ -1673,7 +1791,6 @@ async function stopWheelRecording(){
           wheelPreviewUrl=URL.createObjectURL(wheelVideoBlob);
 
           recordedVideo.src=wheelPreviewUrl;
-
           recordedVideo.load();
 
           videoPreview.classList.add('show');
@@ -1813,6 +1930,64 @@ async function stopWheelRecording(){
 }
 
 // ==========================================
+// تشخیص تلگرام
+// ==========================================
+
+function getTelegramWebApp(){
+
+  if(
+    window.Telegram &&
+    window.Telegram.WebApp
+  ){
+    return window.Telegram.WebApp;
+  }
+
+  return null;
+}
+
+function waitForTelegramWebApp(){
+
+  return new Promise(resolve=>{
+
+    const startedAt=Date.now();
+
+    function check(){
+
+      const webApp=getTelegramWebApp();
+
+      if(webApp){
+
+        tg=webApp;
+
+        console.log('Telegram WebApp detected.');
+
+        resolve(tg);
+        return;
+      }
+
+      if(window.__telegramScriptState==='error'){
+        resolve(null);
+        return;
+      }
+
+      if(Date.now()-startedAt>=15000){
+
+        console.error(
+          'Telegram WebApp detection timed out.'
+        );
+
+        resolve(null);
+        return;
+      }
+
+      setTimeout(check,100);
+    }
+
+    check();
+  });
+}
+
+// ==========================================
 // ابزارهای SVG
 // ==========================================
 
@@ -1842,148 +2017,6 @@ function point(radius,angle){
 }
 
 // ==========================================
-// ساخت افکت SVG خانه برنده
-// ==========================================
-
-function createSvgWinnerEffect(index){
-
-  if(!wheelSlicesGroup) return;
-
-  if(winnerEffectGroup){
-    winnerEffectGroup.remove();
-    winnerEffectGroup=null;
-  }
-
-  const start=index*30;
-  const end=start+30;
-
-  const [x1,y1]=point(239,start);
-  const [x2,y2]=point(239,end);
-
-  const effect=el('g',{
-    id:'winnerEffect'
-  });
-
-  const wedge=el('path',{
-    d:`M 250 250 L ${x1} ${y1} A 239 239 0 0 1 ${x2} ${y2} Z`,
-    class:'winner-wedge'
-  });
-
-  effect.appendChild(wedge);
-
-  const middle=index*30+15;
-  const [cx,cy]=point(155,middle);
-
-  // حلقه‌های انفجار
-
-  effect.appendChild(el('circle',{
-    cx:cx,
-    cy:cy,
-    r:25,
-    class:'winner-ring'
-  }));
-
-  const secondRing=el('circle',{
-    cx:cx,
-    cy:cy,
-    r:18,
-    class:'winner-ring'
-  });
-
-  secondRing.style.animationDelay='.35s';
-
-  effect.appendChild(secondRing);
-
-  // پرتوهای نورانی اطراف خانه
-
-  for(let i=0;i<12;i++){
-
-    const angle=(Math.PI*2*i)/12;
-
-    const inner=28;
-    const outer=48+(i%3)*8;
-
-    const x1=cx+Math.cos(angle)*inner;
-    const y1=cy+Math.sin(angle)*inner;
-
-    const x2=cx+Math.cos(angle)*outer;
-    const y2=cy+Math.sin(angle)*outer;
-
-    const ray=el('line',{
-      x1:x1,
-      y1:y1,
-      x2:x2,
-      y2:y2,
-      class:'winner-ray'
-    });
-
-    ray.style.animationDelay=(i*.035)+'s';
-
-    effect.appendChild(ray);
-  }
-
-  wheelSlicesGroup.appendChild(effect);
-
-  winnerEffectGroup=effect;
-}
-
-// ==========================================
-// اجرای افکت برنده در صفحه و فیلم
-// ==========================================
-
-function playWinnerEffect(index){
-
-  return new Promise(resolve=>{
-
-    winnerEffectIndex=index;
-    winnerEffectStart=performance.now();
-
-    const selectedSlice=wheelSlicePaths[index];
-    const selectedLabel=wheelSliceLabels[index];
-
-    if(selectedSlice){
-      selectedSlice.classList.add('winner-slice');
-    }
-
-    if(selectedLabel){
-      selectedLabel.classList.add('winner-label');
-    }
-
-    createSvgWinnerEffect(index);
-
-    recordingLog(
-      'WINNER EFFECT',
-      'افکت خانه برنده اجرا شد.',
-      {
-        index:index,
-        code:prizes[index].code
-      }
-    );
-
-    setTimeout(function(){
-
-      if(selectedSlice){
-        selectedSlice.classList.remove('winner-slice');
-      }
-
-      if(selectedLabel){
-        selectedLabel.classList.remove('winner-label');
-      }
-
-      if(winnerEffectGroup){
-        winnerEffectGroup.remove();
-        winnerEffectGroup=null;
-      }
-
-      winnerEffectIndex=-1;
-
-      resolve();
-
-    },WINNER_EFFECT_DURATION);
-  });
-}
-
-// ==========================================
 // ساخت گردونه
 // ==========================================
 
@@ -1995,12 +2028,7 @@ function buildWheel(){
 
   svg.innerHTML='';
 
-  wheelSlicePaths=[];
-  wheelSliceLabels=[];
-
   const group=el('g',{id:'slices'});
-
-  wheelSlicesGroup=group;
 
   const colors=[
     '#8f1422','#17171d','#b02230','#242027',
@@ -2016,17 +2044,13 @@ function buildWheel(){
     const [x1,y1]=point(239,start);
     const [x2,y2]=point(239,end);
 
-    const slicePath=el('path',{
+    group.appendChild(el('path',{
       d:`M 250 250 L ${x1} ${y1} A 239 239 0 0 1 ${x2} ${y2} Z`,
       fill:colors[index],
       stroke:'#e5bd69',
       'stroke-width':'2.5',
       'data-prize-index':index
-    });
-
-    wheelSlicePaths[index]=slicePath;
-
-    group.appendChild(slicePath);
+    }));
 
     const middle=start+15;
 
@@ -2040,7 +2064,7 @@ function buildWheel(){
 
     const textGroup=el('g',{
       transform:`translate(${tx} ${ty}) rotate(${textRotation})`,
-      'data-prize-index':index
+      'data-label-index':index
     });
 
     const text=el('text',{
@@ -2068,9 +2092,6 @@ function buildWheel(){
     });
 
     textGroup.appendChild(text);
-
-    wheelSliceLabels[index]=textGroup;
-
     group.appendChild(textGroup);
   });
 
@@ -2269,6 +2290,7 @@ async function loadProfile(){
     const data=await readApiResponse(response);
 
     if(data.ok!==true){
+
       throw new Error(
         data.message||'دریافت پروفایل ناموفق بود.'
       );
@@ -2315,69 +2337,7 @@ async function loadProfile(){
 }
 
 // ==========================================
-// تشخیص تلگرام
-// ==========================================
-
-function getTelegramWebApp(){
-
-  if(
-    window.Telegram &&
-    window.Telegram.WebApp
-  ){
-    return window.Telegram.WebApp;
-  }
-
-  return null;
-}
-
-function waitForTelegramWebApp(){
-
-  return new Promise(resolve=>{
-
-    const startedAt=Date.now();
-
-    function check(){
-
-      const webApp=getTelegramWebApp();
-
-      if(webApp){
-
-        tg=webApp;
-
-        console.log('Telegram WebApp detected.');
-
-        resolve(tg);
-
-        return;
-      }
-
-      if(window.__telegramScriptState==='error'){
-
-        resolve(null);
-
-        return;
-      }
-
-      if(Date.now()-startedAt>=15000){
-
-        console.error(
-          'Telegram WebApp detection timed out.'
-        );
-
-        resolve(null);
-
-        return;
-      }
-
-      setTimeout(check,100);
-    }
-
-    check();
-  });
-}
-
-// ==========================================
-// انیمیشن گردونه
+// انیمیشن گردونه و نمایش افکت برنده
 // ==========================================
 
 function animateToPrize(prizeCode){
@@ -2442,11 +2402,28 @@ function animateToPrize(prizeCode){
         clearTimeout(fallbackTimer);
       }
 
-      // ابتدا افکت برنده اجرا می‌شود؛ ضبط هنوز فعال است
+      // فعال‌سازی افکت روی خانه انتخاب‌شده
+      // این افکت هم در SVG و هم در Canvas اجرا می‌شود.
 
-      await playWinnerEffect(index);
+      createWinnerEffect(index);
 
-      // سپس ضبط متوقف و فیلم آپلود می‌شود
+      recordingLog(
+        'WINNER EFFECT',
+        'افکت خانه برنده فعال شد.',
+        {
+          prizeCode:prizeCode,
+          index:index
+        }
+      );
+
+      // فرصت کافی برای ثبت کامل افکت در فیلم
+
+      await new Promise(resolveDelay=>{
+        setTimeout(
+          resolveDelay,
+          WINNER_EFFECT_DURATION+100
+        );
+      });
 
       if(recordingStarted){
         await stopWheelRecording();
@@ -2471,7 +2448,6 @@ function animateToPrize(prizeCode){
       'rotate('+currentRotation+'deg)';
 
     fallbackTimer=setTimeout(finish,7000);
-
   });
 }
 
@@ -2514,6 +2490,7 @@ async function spinWheel(){
 
   result.classList.remove('show');
 
+  clearWinnerEffect();
   clearPreviousRecording();
 
   recordingStatus.textContent='';
