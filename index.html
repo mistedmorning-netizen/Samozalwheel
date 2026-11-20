@@ -504,6 +504,9 @@ const params=new URLSearchParams(window.location.search);
 const profileApiUrl=params.get('api');
 const spinApiUrl=params.get('spinapi');
 
+// لینک اختصاصی دریافت لینک فیلم از TelebotHost
+const videoApiUrl=params.get('videoapi');
+
 const NS='http://www.w3.org/2000/svg';
 
 // ==========================================
@@ -721,6 +724,79 @@ async function uploadWheelVideo(blob){
     fileSize:data.files[0].size||blob.size,
     expiresAt:data.expires_at||null
   };
+}
+
+// ==========================================
+// ارسال لینک مستقیم به فرمان wheelvideo
+// ==========================================
+
+async function sendVideoLinkToBot(downloadUrl){
+
+  if(!videoApiUrl){
+    throw new Error('لینک اختصاصی videoapi در صفحه وجود ندارد.');
+  }
+
+  if(!downloadUrl||typeof downloadUrl!=='string'){
+    throw new Error('لینک مستقیم فیلم معتبر نیست.');
+  }
+
+  const parsedUrl=new URL(downloadUrl);
+
+  if(
+    parsedUrl.protocol!=='https:'||
+    parsedUrl.hostname!=='easysend.co'
+  ){
+    throw new Error('دامنه لینک فیلم مورد تأیید نیست.');
+  }
+
+  recordingLog(
+    'VIDEO WEBHOOK START',
+    'در حال ارسال لینک فیلم به TelebotHost.'
+  );
+
+  let response;
+
+  try{
+
+    response=await fetch(videoApiUrl,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        downloadUrl:downloadUrl
+      }),
+      cache:'no-store'
+    });
+
+  }catch(error){
+
+    recordingLog(
+      'VIDEO WEBHOOK NETWORK ERROR',
+      'ارتباط با فرمان wheelvideo برقرار نشد.',
+      error
+    );
+
+    throw new Error(
+      'ارسال لینک به TelebotHost ناموفق بود؛ احتمال مشکل CORS یا شبکه.'
+    );
+  }
+
+  const data=await readApiResponse(response);
+
+  if(data.ok!==true||data.received!==true){
+
+    throw new Error(
+      data.message||'TelebotHost دریافت لینک را تأیید نکرد.'
+    );
+  }
+
+  recordingLog(
+    'VIDEO WEBHOOK SUCCESS',
+    'فرمان wheelvideo دریافت لینک را تأیید کرد.'
+  );
+
+  return data;
 }
 
 // ==========================================
@@ -1365,18 +1441,15 @@ async function stopWheelRecording(){
 
           // آپلود مستقیم همان Blob به EasySend
 
+          let uploadResult;
+
           try{
 
-            const uploadResult=await uploadWheelVideo(
+            uploadResult=await uploadWheelVideo(
               wheelVideoBlob
             );
 
             showUploadedVideo(uploadResult);
-
-            setRecordingMessage(
-              '✅ آپلود کامل شد. لینک مستقیم دریافت شد.',
-              'success'
-            );
 
             recordingLog(
               'UPLOAD COMPLETE',
@@ -1397,6 +1470,46 @@ async function stopWheelRecording(){
               'error'
             );
 
+            resolve(wheelVideoBlob);
+            return;
+          }
+
+          // ارسال لینک آپلودشده به TelebotHost
+
+          try{
+
+            setRecordingMessage(
+              '⏳ آپلود انجام شد؛ در حال ارسال لینک به ربات...'
+            );
+
+            const webhookResult=await sendVideoLinkToBot(
+              uploadResult.downloadUrl
+            );
+
+            recordingLog(
+              'VIDEO LINK RECEIVED',
+              'TelebotHost دریافت لینک را تأیید کرد.',
+              webhookResult
+            );
+
+            setRecordingMessage(
+              '✅ آپلود موفق بود و لینک با موفقیت به ربات رسید.',
+              'success'
+            );
+
+          }catch(webhookError){
+
+            recordingLog(
+              'VIDEO WEBHOOK ERROR',
+              webhookError.message,
+              webhookError
+            );
+
+            setRecordingMessage(
+              '⚠️ فیلم آپلود شد، اما ارسال لینک به ربات ناموفق بود: '+
+              webhookError.message,
+              'error'
+            );
           }
 
           resolve(wheelVideoBlob);
@@ -1964,7 +2077,7 @@ async function spinWheel(){
   if(remainingChances<=0){
 
     status.textContent=
-      '❌ شانس کافی برای چرخش ندارید.';
+      'شانس کافی برای چرخش ندارید.';
 
     return;
   }
