@@ -229,67 +229,6 @@ h1{
   overflow-wrap:anywhere;
 }
 
-.recording-download{
-  display:none;
-  margin:10px auto 0;
-  padding:10px 18px;
-  width:max-content;
-  max-width:100%;
-  border:1px solid #d6ad61;
-  border-radius:12px;
-  color:#fff3d8;
-  background:#33221b;
-  text-decoration:none;
-  font-size:12px;
-}
-
-.recording-download.show{display:block}
-
-.video-preview{
-  display:none;
-  width:100%;
-  max-width:500px;
-  margin:16px auto 0;
-  padding:12px;
-  border:1px solid #b58b4b77;
-  border-radius:16px;
-  background:#09090d;
-}
-
-.video-preview.show{display:block}
-
-.video-preview-title{
-  color:#f0ce7a;
-  font-size:13px;
-  margin-bottom:10px;
-  font-weight:bold;
-}
-
-.recorded-video{
-  display:block;
-  width:100%;
-  max-height:65vh;
-  background:#000;
-  border-radius:10px;
-  object-fit:contain;
-}
-
-.video-info{
-  color:#cdbb9d;
-  font-size:11px;
-  line-height:1.9;
-  margin-top:8px;
-  overflow-wrap:anywhere;
-}
-
-.video-info a{
-  color:#f0ce7a;
-  display:block;
-  margin-top:8px;
-  direction:ltr;
-  overflow-wrap:anywhere;
-}
-
 .note{
   text-align:center;
   color:#a89a89;
@@ -398,29 +337,6 @@ footer{
 
     <div class="recording-status" id="recordingStatus" aria-live="polite"></div>
 
-    <a
-      class="recording-download"
-      id="recordingDownload"
-      href="#"
-      download="samozal-wheel.webm"
-    >⬇️ دانلود فیلم گردونه</a>
-
-    <div class="video-preview" id="videoPreview">
-      <div class="video-preview-title">
-        🎬 پیش‌نمایش فیلم چرخش گردونه
-      </div>
-
-      <video
-        class="recorded-video"
-        id="recordedVideo"
-        controls
-        playsinline
-        preload="metadata"
-      ></video>
-
-      <div class="video-info" id="videoInfo"></div>
-    </div>
-
     <div class="result" id="result" aria-live="polite">
       <div class="result-title" id="resultTitle"></div>
       <div class="result-desc" id="resultDesc"></div>
@@ -473,17 +389,15 @@ const profileGames=document.getElementById('profileGames');
 const status=document.getElementById('status');
 const recordingStatus=document.getElementById('recordingStatus');
 
-const recordingDownload=document.getElementById('recordingDownload');
-
-const videoPreview=document.getElementById('videoPreview');
-const recordedVideo=document.getElementById('recordedVideo');
-const videoInfo=document.getElementById('videoInfo');
-
 const spinBtn=document.getElementById('spinBtn');
 
 const result=document.getElementById('result');
 const resultTitle=document.getElementById('resultTitle');
 const resultDesc=document.getElementById('resultDesc');
+
+// ==========================================
+// تنظیمات API و تلگرام
+// ==========================================
 
 let tg=null;
 
@@ -494,6 +408,11 @@ const spinApiUrl=params.get('spinapi');
 const videoApiUrl=params.get('videoapi');
 
 const NS='http://www.w3.org/2000/svg';
+
+const PROFILE_TIMEOUT=15000;
+const SPIN_TIMEOUT=20000;
+const UPLOAD_TIMEOUT=120000;
+const WEBHOOK_TIMEOUT=30000;
 
 // ==========================================
 // وضعیت برنامه
@@ -529,9 +448,6 @@ let wheelCanvasContext=null;
 let wheelSvgImage=null;
 let wheelSvgUrl=null;
 
-let wheelDownloadUrl=null;
-let wheelPreviewUrl=null;
-
 let recordingActive=false;
 let recordingStream=null;
 
@@ -556,6 +472,40 @@ function setRecordingMessage(message,type){
     recordingStatus.style.color='#8de0a5';
   }else{
     recordingStatus.style.color='#f0ce7a';
+  }
+}
+
+// ==========================================
+// درخواست شبکه با محدودیت زمانی
+// ==========================================
+
+async function fetchWithTimeout(url,options,timeout,message){
+
+  const controller=new AbortController();
+
+  const timer=setTimeout(function(){
+    controller.abort();
+  },timeout);
+
+  try{
+
+    const requestOptions=Object.assign({},options||{},{
+      signal:controller.signal
+    });
+
+    return await fetch(url,requestOptions);
+
+  }catch(error){
+
+    if(error&&error.name==='AbortError'){
+      throw new Error(message||'زمان انتظار پاسخ سرور به پایان رسید.');
+    }
+
+    throw error;
+
+  }finally{
+
+    clearTimeout(timer);
   }
 }
 
@@ -677,7 +627,6 @@ function createWinnerEffect(index){
   }
 
   // کپی نوشته جایزه برای درخشش و بزرگ‌شدن
-  // مختصات و زاویه اصلی نوشته حفظ می‌شود.
 
   const originalLabel=svg.querySelector(
     `[data-label-index="${index}"]`
@@ -823,8 +772,6 @@ function drawWinnerEffectOnCanvas(ctx){
   const start=middle-(15*Math.PI/180);
   const end=middle+(15*Math.PI/180);
 
-  // مقیاس Canvas نسبت به SVG
-
   const wheelScale=940/500;
   const labelRadius=154*wheelScale;
 
@@ -956,7 +903,10 @@ async function uploadWheelVideo(blob){
 
   const formData=new FormData();
 
-  const fileName='samozal-wheel-'+Date.now()+'.webm';
+  // فقط پسوند نام فایل MP4 است.
+  // محتوای واقعی فایل همچنان WebM باقی می‌ماند.
+
+  const fileName='samozal-wheel-'+Date.now()+'.mp4';
 
   const videoFile=new File(
     [blob],
@@ -970,21 +920,26 @@ async function uploadWheelVideo(blob){
 
   try{
 
-    response=await fetch(uploadEndpoint,{
-      method:'POST',
-      body:formData
-    });
+    response=await fetchWithTimeout(
+      uploadEndpoint,
+      {
+        method:'POST',
+        body:formData
+      },
+      UPLOAD_TIMEOUT,
+      'زمان آپلود ویدئو به پایان رسید.'
+    );
 
   }catch(error){
 
     recordingLog(
       'UPLOAD NETWORK ERROR',
-      'ارتباط با EasySend برقرار نشد. احتمال خطای CORS یا شبکه.',
+      'ارتباط با EasySend برقرار نشد یا زمان آپلود به پایان رسید.',
       error
     );
 
     throw new Error(
-      'ارتباط با EasySend برقرار نشد؛ احتمال مشکل شبکه یا CORS.'
+      error.message||'ارتباط با EasySend برقرار نشد؛ احتمال مشکل شبکه یا CORS.'
     );
   }
 
@@ -1058,14 +1013,54 @@ async function uploadWheelVideo(blob){
     );
   }
 
-  const downloadUrl=new URL(
-    data.files[0].download_url,
-    'https://easysend.co'
-  ).href;
+  let downloadUrl;
+  let shareLink='';
 
-  const shareLink=data.share_link
-    ?new URL(data.share_link,'https://easysend.co').href
-    :'';
+  try{
+
+    const parsedDownloadUrl=new URL(
+      data.files[0].download_url,
+      'https://easysend.co'
+    );
+
+    if(
+      parsedDownloadUrl.protocol!=='https:'||
+      parsedDownloadUrl.hostname!=='easysend.co'
+    ){
+      throw new Error('دامنه لینک دانلود مورد تأیید نیست.');
+    }
+
+    downloadUrl=parsedDownloadUrl.href;
+
+    if(data.share_link){
+
+      const parsedShareLink=new URL(
+        data.share_link,
+        'https://easysend.co'
+      );
+
+      if(
+        parsedShareLink.protocol!=='https:'||
+        parsedShareLink.hostname!=='easysend.co'
+      ){
+        throw new Error('دامنه لینک اشتراک‌گذاری مورد تأیید نیست.');
+      }
+
+      shareLink=parsedShareLink.href;
+    }
+
+  }catch(error){
+
+    recordingLog(
+      'UPLOAD URL ERROR',
+      'لینک برگشتی از EasySend معتبر نیست.',
+      error
+    );
+
+    throw new Error(
+      error.message||'لینک برگشتی از EasySend معتبر نیست.'
+    );
+  }
 
   recordingLog(
     'UPLOAD SUCCESS',
@@ -1119,16 +1114,21 @@ async function sendVideoLinkToBot(downloadUrl){
 
   try{
 
-    response=await fetch(videoApiUrl,{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json'
+    response=await fetchWithTimeout(
+      videoApiUrl,
+      {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({
+          downloadUrl:downloadUrl
+        }),
+        cache:'no-store'
       },
-      body:JSON.stringify({
-        downloadUrl:downloadUrl
-      }),
-      cache:'no-store'
-    });
+      WEBHOOK_TIMEOUT,
+      'زمان انتظار پاسخ فرمان ارسال ویدئو به پایان رسید.'
+    );
 
   }catch(error){
 
@@ -1139,7 +1139,7 @@ async function sendVideoLinkToBot(downloadUrl){
     );
 
     throw new Error(
-      'ارسال لینک به TelebotHost ناموفق بود؛ احتمال مشکل CORS یا شبکه.'
+      error.message||'ارسال لینک به TelebotHost ناموفق بود؛ احتمال مشکل CORS یا شبکه.'
     );
   }
 
@@ -1158,60 +1158,6 @@ async function sendVideoLinkToBot(downloadUrl){
   );
 
   return data;
-}
-
-// ==========================================
-// نمایش لینک آپلود موفق برای آزمایش
-// ==========================================
-
-function showUploadedVideo(uploadResult){
-
-  videoInfo.textContent=
-    'حجم فایل: '+
-    (wheelVideoBlob.size/(1024*1024)).toFixed(2)+
-    ' مگابایت | فرمت: WebM';
-
-  const link=document.createElement('a');
-
-  link.href=uploadResult.downloadUrl;
-  link.target='_blank';
-  link.rel='noopener noreferrer';
-  link.textContent='🔗 باز کردن لینک مستقیم فیلم آپلودشده';
-
-  videoInfo.appendChild(link);
-
-  const copyButton=document.createElement('button');
-
-  copyButton.type='button';
-  copyButton.textContent='کپی لینک مستقیم';
-
-  copyButton.style.cssText=
-    'display:block;margin:10px auto 0;padding:9px 18px;border-radius:10px;border:1px solid #d6ad61;background:#33221b;color:#fff3d8;font-family:Tahoma;cursor:pointer;';
-
-  copyButton.addEventListener('click',async function(){
-
-    try{
-
-      await navigator.clipboard.writeText(
-        uploadResult.downloadUrl
-      );
-
-      copyButton.textContent='✅ لینک کپی شد';
-
-    }catch(error){
-
-      recordingLog(
-        'COPY ERROR',
-        'کپی لینک ناموفق بود.',
-        error
-      );
-
-      copyButton.textContent='❌ کپی خودکار ممکن نیست';
-    }
-
-  });
-
-  videoInfo.appendChild(copyButton);
 }
 
 // ==========================================
@@ -1545,29 +1491,22 @@ function getSupportedVideoMimeType(){
 
 function clearPreviousRecording(){
 
-  if(wheelDownloadUrl){
-    URL.revokeObjectURL(wheelDownloadUrl);
-    wheelDownloadUrl=null;
-  }
-
-  if(wheelPreviewUrl){
-    URL.revokeObjectURL(wheelPreviewUrl);
-    wheelPreviewUrl=null;
-  }
-
-  recordingDownload.classList.remove('show');
-  recordingDownload.removeAttribute('href');
-
-  videoPreview.classList.remove('show');
-
-  recordedVideo.pause();
-  recordedVideo.removeAttribute('src');
-  recordedVideo.load();
-
-  videoInfo.textContent='';
-
   wheelVideoBlob=null;
   wheelRecordChunks=[];
+
+  if(wheelSvgUrl){
+    URL.revokeObjectURL(wheelSvgUrl);
+    wheelSvgUrl=null;
+  }
+
+  if(recordingStream){
+    recordingStream.getTracks().forEach(track=>{
+      track.stop();
+    });
+    recordingStream=null;
+  }
+
+  wheelRecorder=null;
 }
 
 // ==========================================
@@ -1613,14 +1552,38 @@ async function startWheelRecording(){
 
     drawWheelRecordingFrame();
 
-    const sample=wheelCanvasContext.getImageData(
-      500,
-      150,
-      1,
-      1
-    ).data;
+    // چون Canvas با alpha:false ساخته شده،
+    // بررسی شفافیت معتبر نیست؛ محتوای RGB بررسی می‌شود.
 
-    if(sample[3]===0){
+    const samplePoints=[
+      [500,150],
+      [500,500],
+      [350,350],
+      [650,350]
+    ];
+
+    let canvasHasContent=false;
+
+    for(const samplePoint of samplePoints){
+
+      const sample=wheelCanvasContext.getImageData(
+        samplePoint[0],
+        samplePoint[1],
+        1,
+        1
+      ).data;
+
+      if(
+        sample[0]>20||
+        sample[1]>20||
+        sample[2]>20
+      ){
+        canvasHasContent=true;
+        break;
+      }
+    }
+
+    if(!canvasHasContent){
       throw new Error('Canvas تصویر قابل مشاهده ندارد.');
     }
 
@@ -1740,6 +1703,29 @@ async function stopWheelRecording(){
 
   return new Promise(resolve=>{
 
+    let settled=false;
+
+    function finish(blob){
+
+      if(settled) return;
+
+      settled=true;
+
+      if(recordingStream){
+        recordingStream.getTracks().forEach(track=>{
+          track.stop();
+        });
+        recordingStream=null;
+      }
+
+      if(wheelSvgUrl){
+        URL.revokeObjectURL(wheelSvgUrl);
+        wheelSvgUrl=null;
+      }
+
+      resolve(blob||null);
+    }
+
     try{
 
       recordingActive=false;
@@ -1750,12 +1736,18 @@ async function stopWheelRecording(){
       }
 
       if(!wheelRecorder){
-        resolve(null);
+        finish(null);
         return;
       }
 
       if(wheelRecorder.state==='inactive'){
-        resolve(wheelVideoBlob);
+
+        if(wheelVideoBlob&&wheelVideoBlob.size>0){
+          finish(wheelVideoBlob);
+        }else{
+          finish(null);
+        }
+
         return;
       }
 
@@ -1773,44 +1765,6 @@ async function stopWheelRecording(){
           if(!wheelVideoBlob||wheelVideoBlob.size===0){
             throw new Error('فایل ویدئویی خالی است.');
           }
-
-          if(recordingStream){
-
-            recordingStream.getTracks().forEach(track=>{
-              track.stop();
-            });
-
-            recordingStream=null;
-          }
-
-          if(wheelSvgUrl){
-            URL.revokeObjectURL(wheelSvgUrl);
-            wheelSvgUrl=null;
-          }
-
-          // پیش‌نمایش محلی برای مرحله آزمایش
-
-          wheelDownloadUrl=URL.createObjectURL(wheelVideoBlob);
-
-          recordingDownload.href=wheelDownloadUrl;
-          recordingDownload.classList.add('show');
-
-          recordingDownload.download=
-            'samozal-wheel-'+Date.now()+'.webm';
-
-          wheelPreviewUrl=URL.createObjectURL(wheelVideoBlob);
-
-          recordedVideo.src=wheelPreviewUrl;
-          recordedVideo.load();
-
-          videoPreview.classList.add('show');
-
-          const sizeMB=(
-            wheelVideoBlob.size/(1024*1024)
-          ).toFixed(2);
-
-          videoInfo.textContent=
-            'حجم فایل: '+sizeMB+' مگابایت | فرمت: WebM';
 
           recordingLog(
             'COMPLETE',
@@ -1832,8 +1786,6 @@ async function stopWheelRecording(){
               wheelVideoBlob
             );
 
-            showUploadedVideo(uploadResult);
-
             recordingLog(
               'UPLOAD COMPLETE',
               'لینک مستقیم آماده انتقال به مرحله بعد است.',
@@ -1853,7 +1805,7 @@ async function stopWheelRecording(){
               'error'
             );
 
-            resolve(wheelVideoBlob);
+            finish(wheelVideoBlob);
             return;
           }
 
@@ -1895,7 +1847,7 @@ async function stopWheelRecording(){
             );
           }
 
-          resolve(wheelVideoBlob);
+          finish(wheelVideoBlob);
 
         }catch(error){
 
@@ -1910,7 +1862,7 @@ async function stopWheelRecording(){
             'error'
           );
 
-          resolve(null);
+          finish(null);
         }
       };
 
@@ -1934,7 +1886,7 @@ async function stopWheelRecording(){
         'error'
       );
 
-      resolve(null);
+      finish(null);
     }
   });
 }
@@ -2164,11 +2116,35 @@ async function readApiResponse(response){
 
 function updateProfileDisplay(data){
 
-  remainingChances=Number(data.chances);
+  const chances=Number(data.chances);
 
-  if(!Number.isFinite(remainingChances)){
+  if(
+    data.chances===undefined||
+    data.chances===null||
+    data.chances===''||
+    !Number.isFinite(chances)
+  ){
+
+    profileLoaded=false;
     remainingChances=0;
+
+    profileMessage.textContent=
+      '⚠️ تعداد شانس‌های حساب قابل تشخیص نیست.';
+
+    profileChances.textContent=
+      '🎟️ شانس باقی‌مانده: نامشخص';
+
+    spinBtn.disabled=true;
+    spinBtn.style.opacity='.7';
+    spinBtn.textContent='🎲 اطلاعات شانس نامشخص';
+
+    status.textContent=
+      'اطلاعات شانس از سرور معتبر نیست؛ لطفاً دوباره تلاش کنید.';
+
+    return false;
   }
+
+  remainingChances=chances;
 
   const games=Number(data.samozal_games)||0;
 
@@ -2200,6 +2176,8 @@ function updateProfileDisplay(data){
     status.textContent=
       'در حال حاضر شانس فعالی برای چرخش ندارید.';
   }
+
+  return true;
 }
 
 // ==========================================
@@ -2292,10 +2270,15 @@ async function loadProfile(){
 
   try{
 
-    const response=await fetch(profileApiUrl,{
-      method:'GET',
-      cache:'no-store'
-    });
+    const response=await fetchWithTimeout(
+      profileApiUrl,
+      {
+        method:'GET',
+        cache:'no-store'
+      },
+      PROFILE_TIMEOUT,
+      'زمان دریافت اطلاعات پروفایل به پایان رسید.'
+    );
 
     const data=await readApiResponse(response);
 
@@ -2412,6 +2395,11 @@ function animateToPrize(prizeCode){
         clearTimeout(fallbackTimer);
       }
 
+      // پیام اول دقیقاً پس از توقف گردونه و مشخص‌شدن جایزه
+
+      status.textContent=
+        '⏳ گردونه در حال ثبت جایزه شماست. لطفاً تا پایان فرایند، گردونه را نبندید.';
+
       // فعال‌سازی افکت روی خانه انتخاب‌شده
       // این افکت هم در SVG و هم در Canvas اجرا می‌شود.
 
@@ -2426,20 +2414,38 @@ function animateToPrize(prizeCode){
         }
       );
 
-      // فرصت کافی برای ثبت کامل افکت در فیلم
+      try{
 
-      await new Promise(resolveDelay=>{
-        setTimeout(
-          resolveDelay,
-          WINNER_EFFECT_DURATION+100
+        // فرصت کافی برای ثبت کامل افکت در فیلم
+
+        await new Promise(resolveDelay=>{
+          setTimeout(
+            resolveDelay,
+            WINNER_EFFECT_DURATION+100
+          );
+        });
+
+        if(recordingStarted){
+          await stopWheelRecording();
+        }
+
+      }catch(error){
+
+        recordingLog(
+          'FINAL RECORDING ERROR',
+          'فرایند ضبط یا آپلود با خطا پایان یافت.',
+          error
         );
-      });
 
-      if(recordingStarted){
-        await stopWheelRecording();
+      }finally{
+
+        // پیام دوم مستقل از موفقیت ضبط، آپلود یا ارسال لینک است.
+
+        status.textContent=
+          '🎉 جایزه شما با موفقیت ثبت شد.';
+
+        resolve();
       }
-
-      resolve();
     }
 
     function onTransitionEnd(event){
@@ -2510,10 +2516,15 @@ async function spinWheel(){
 
   try{
 
-    const response=await fetch(spinApiUrl,{
-      method:'GET',
-      cache:'no-store'
-    });
+    const response=await fetchWithTimeout(
+      spinApiUrl,
+      {
+        method:'GET',
+        cache:'no-store'
+      },
+      SPIN_TIMEOUT,
+      'زمان دریافت نتیجه چرخش به پایان رسید.'
+    );
 
     const data=await readApiResponse(response);
 
@@ -2552,17 +2563,33 @@ async function spinWheel(){
 
     result.classList.add('show');
 
-    status.textContent=
-      'چرخش با موفقیت انجام شد.';
+    // پیام دوم در animateToPrize تنظیم شده است؛
+    // اینجا عمداً بازنویسی نمی‌شود.
 
-    remainingChances=Number(data.chances);
+    const updatedChances=Number(data.chances);
 
-    if(!Number.isFinite(remainingChances)){
-      remainingChances=0;
+    if(
+      data.chances!==undefined&&
+      data.chances!==null&&
+      data.chances!==''&&
+      Number.isFinite(updatedChances)
+    ){
+
+      remainingChances=updatedChances;
+
+      profileChances.textContent=
+        '🎟️ شانس باقی‌مانده: '+remainingChances;
+
+    }else{
+
+      recordingLog(
+        'CHANCES WARNING',
+        'تعداد شانس جدید از پاسخ چرخش معتبر نبود؛ پروفایل دوباره دریافت می‌شود.',
+        data.chances
+      );
+
+      await loadProfile();
     }
-
-    profileChances.textContent=
-      '🎟️ شانس باقی‌مانده: '+remainingChances;
 
     if(data.samozal_games!==undefined){
 
