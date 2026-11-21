@@ -903,7 +903,7 @@ async function uploadWheelVideo(blob){
 
   const formData=new FormData();
 
-  // فقط پسوند نام فایل MP4 است.
+  // نام فایل و نوع اعلام‌شده MP4 است.
   // محتوای واقعی فایل همچنان WebM باقی می‌ماند.
 
   const fileName='samozal-wheel-'+Date.now()+'.mp4';
@@ -911,7 +911,7 @@ async function uploadWheelVideo(blob){
   const videoFile=new File(
     [blob],
     fileName,
-    {type:'video/webm'}
+    {type:'video/mp4'}
   );
 
   formData.append('files[]',videoFile);
