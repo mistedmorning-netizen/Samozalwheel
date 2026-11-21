@@ -677,6 +677,7 @@ function createWinnerEffect(index){
   }
 
   // کپی نوشته جایزه برای درخشش و بزرگ‌شدن
+  // مختصات و زاویه اصلی نوشته حفظ می‌شود.
 
   const originalLabel=svg.querySelector(
     `[data-label-index="${index}"]`
@@ -687,16 +688,21 @@ function createWinnerEffect(index){
     const highlightedLabel=originalLabel.cloneNode(true);
 
     highlightedLabel.setAttribute('class','winner-label');
+
+    const originalTransform=originalLabel.getAttribute('transform');
+
     highlightedLabel.setAttribute(
-      'transform',
-      `translate(${tx} ${ty}) rotate(${middle>90&&middle<270?middle+180:middle})`
+      'data-base-transform',
+      originalTransform
     );
 
     highlightedLabel.querySelectorAll('text').forEach(text=>{
+
       text.setAttribute('fill','#fff8d7');
       text.setAttribute('stroke','#8b4d0b');
       text.setAttribute('stroke-width','4');
       text.setAttribute('filter','url(#winnerGlow)');
+
     });
 
     winnerEffectGroup.appendChild(highlightedLabel);
@@ -758,9 +764,13 @@ function updateWinnerEffectVisual(progress){
 
     const scale=1+Math.sin(Math.min(1,t*3)*Math.PI)*.16;
 
-    label.style.transformBox='fill-box';
-    label.style.transformOrigin='center';
-    label.style.transform=`scale(${scale})`;
+    const baseTransform=label.getAttribute('data-base-transform');
+
+    label.setAttribute(
+      'transform',
+      `${baseTransform} scale(${scale})`
+    );
+
     label.style.filter='drop-shadow(0 0 8px #ffd75c)';
   }
 
