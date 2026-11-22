@@ -213,18 +213,19 @@ h1{
 .spin:disabled{cursor:not-allowed}
 
 .status{
-  min-height:27px;
+  min-height:34px;
   margin-top:16px;
-  color:#d8c8ad;
-  font-size:13px;
-  line-height:1.8;
+  color:var(--gold);
+  font-size:16px;
+  font-weight:bold;
+  line-height:2;
 }
 
 .recording-status{
-  min-height:22px;
+  min-height:25px;
   margin-top:5px;
-  color:#f0ce7a;
-  font-size:11px;
+  color:var(--gold);
+  font-size:20px;
   line-height:1.8;
   overflow-wrap:anywhere;
 }
@@ -283,6 +284,10 @@ footer{
     border-left-width:15px;
     border-right-width:15px;
     border-bottom-width:29px;
+  }
+
+  .status{
+    font-size:15px;
   }
 }
 </style>
@@ -434,22 +439,14 @@ let winnerEffectGroup=null;
 const WINNER_EFFECT_DURATION=2300;
 
 // ==========================================
-// متغیرهای ضبط
+// وضعیت نشست‌های ضبط
 // ==========================================
 
-let wheelRecorder=null;
-let wheelRecordChunks=[];
-let wheelAnimationFrame=null;
-let wheelVideoBlob=null;
+// هر چرخش یک recordingSession مستقل دارد.
+// اطلاعات ضبط قبلی در نشست خودش باقی می‌ماند.
+// شروع ضبط جدید به اطلاعات نشست قبلی دست نمی‌زند.
 
-let wheelCanvas=null;
-let wheelCanvasContext=null;
-
-let wheelSvgImage=null;
-let wheelSvgUrl=null;
-
-let recordingActive=false;
-let recordingStream=null;
+let activeRecordingSession=null;
 
 // ==========================================
 // گزارش خطا
@@ -463,16 +460,27 @@ function recordingLog(stage,message,error){
   );
 }
 
-function setRecordingMessage(message,type){
-  recordingStatus.textContent=message;
+// فقط ایموجی وضعیت به کاربر نشان داده می‌شود.
+// جزئیات فنی و خطاها فقط در Console ثبت می‌شوند.
+
+function setRecordingMessage(message,type,session){
+
+  // نتیجه یک نشست قدیمی نباید وضعیت نشست جدید را تغییر دهد.
+  if(session&&activeRecordingSession!==session){
+    return;
+  }
 
   if(type==='error'){
-    recordingStatus.style.color='#ff7777';
+    recordingStatus.textContent='⚠️';
   }else if(type==='success'){
-    recordingStatus.style.color='#8de0a5';
+    recordingStatus.textContent='✨';
+  }else if(message){
+    recordingStatus.textContent='⏳';
   }else{
-    recordingStatus.style.color='#f0ce7a';
+    recordingStatus.textContent='';
   }
+
+  recordingStatus.style.color='#f0ce7a';
 }
 
 // ==========================================
@@ -550,8 +558,6 @@ function createWinnerEffect(index){
     'pointer-events':'none'
   });
 
-  // پوشش طلایی روی خانه انتخاب‌شده
-
   winnerEffectGroup.appendChild(el('path',{
     d:`M 250 250 L ${x1} ${y1} A 239 239 0 0 1 ${x2} ${y2} Z`,
     fill:'#ffd76a',
@@ -560,8 +566,6 @@ function createWinnerEffect(index){
     'stroke-width':'5',
     filter:'url(#winnerGlow)'
   }));
-
-  // تعریف درخشش
 
   const defs=el('defs');
 
@@ -585,8 +589,6 @@ function createWinnerEffect(index){
   defs.appendChild(filter);
   winnerEffectGroup.appendChild(defs);
 
-  // حلقه‌های انفجاری اطراف نوشته جایزه
-
   for(let i=0;i<3;i++){
 
     winnerEffectGroup.appendChild(el('circle',{
@@ -602,8 +604,6 @@ function createWinnerEffect(index){
     }));
 
   }
-
-  // ذرات انفجاری طلایی
 
   for(let i=0;i<16;i++){
 
@@ -625,8 +625,6 @@ function createWinnerEffect(index){
     }));
 
   }
-
-  // کپی نوشته جایزه برای درخشش و بزرگ‌شدن
 
   const originalLabel=svg.querySelector(
     `[data-label-index="${index}"]`
@@ -783,8 +781,6 @@ function drawWinnerEffectOnCanvas(ctx){
   ctx.translate(500,500);
   ctx.rotate(getWheelCurrentAngle());
 
-  // درخشش طلایی خانه برنده
-
   ctx.save();
 
   ctx.beginPath();
@@ -803,8 +799,6 @@ function drawWinnerEffectOnCanvas(ctx){
 
   ctx.restore();
 
-  // حلقه‌های انفجاری اطراف نوشته جایزه
-
   for(let i=0;i<3;i++){
 
     const phase=(progress*2.5+i/3)%1;
@@ -822,8 +816,6 @@ function drawWinnerEffectOnCanvas(ctx){
     ctx.shadowBlur=18;
     ctx.stroke();
   }
-
-  // ذرات انفجاری
 
   for(let i=0;i<16;i++){
 
@@ -857,8 +849,6 @@ function drawWinnerEffectOnCanvas(ctx){
     ctx.restore();
   }
 
-  // برجسته‌کردن نوشته جایزه
-
   const scale=1+Math.sin(Math.min(1,progress*3)*Math.PI)*.16;
 
   ctx.save();
@@ -890,28 +880,34 @@ async function uploadWheelVideo(blob){
 
   const uploadEndpoint='https://easysend.co/api/v1/upload';
 
-  setRecordingMessage('⏳ در حال آپلود ویدئو به EasySend...');
+  const isMp4=(blob.type||'').toLowerCase().includes('mp4');
+  const isWebm=(blob.type||'').toLowerCase().includes('webm');
+
+  if(!isMp4&&!isWebm){
+    throw new Error('فرمت واقعی فایل ضبط‌شده قابل تشخیص نیست.');
+  }
+
+  const fileExtension=isMp4?'mp4':'webm';
+  const fileMime=isMp4?'video/mp4':'video/webm';
 
   recordingLog(
     'UPLOAD START',
-    'شروع آپلود مستقیم فایل از Mini App.',
+    'شروع آپلود فایل از Mini App.',
     {
       size:blob.size,
-      type:blob.type
+      type:blob.type,
+      extension:fileExtension
     }
   );
 
   const formData=new FormData();
 
-  // نام فایل و نوع اعلام‌شده MP4 است.
-  // محتوای واقعی فایل همچنان WebM باقی می‌ماند.
-
-  const fileName='samozal-wheel-'+Date.now()+'.mp4';
+  const fileName='samozal-wheel-'+Date.now()+'.'+fileExtension;
 
   const videoFile=new File(
     [blob],
     fileName,
-    {type:'video/mp4'}
+    {type:fileMime}
   );
 
   formData.append('files[]',videoFile);
@@ -939,7 +935,7 @@ async function uploadWheelVideo(blob){
     );
 
     throw new Error(
-      error.message||'ارتباط با EasySend برقرار نشد؛ احتمال مشکل شبکه یا CORS.'
+      error.message||'ارتباط با EasySend برقرار نشد.'
     );
   }
 
@@ -1107,7 +1103,7 @@ async function sendVideoLinkToBot(downloadUrl){
 
   recordingLog(
     'VIDEO WEBHOOK START',
-    'در حال ارسال لینک فیلم به TelebotHost.'
+    'ارسال لینک فیلم به TelebotHost آغاز شد.'
   );
 
   let response;
@@ -1139,7 +1135,7 @@ async function sendVideoLinkToBot(downloadUrl){
     );
 
     throw new Error(
-      error.message||'ارسال لینک به TelebotHost ناموفق بود؛ احتمال مشکل CORS یا شبکه.'
+      error.message||'ارسال لینک به TelebotHost ناموفق بود.'
     );
   }
 
@@ -1212,10 +1208,10 @@ function getWheelCurrentAngle(){
 }
 
 // ==========================================
-// آماده‌سازی تصویر واقعی SVG
+// آماده‌سازی تصویر SVG برای یک نشست ضبط
 // ==========================================
 
-async function prepareWheelRecordingImage(){
+async function prepareWheelRecordingImage(session){
 
   if(!svg){
     throw new Error('عنصر SVG گردونه پیدا نشد.');
@@ -1233,9 +1229,6 @@ async function prepareWheelRecordingImage(){
 
   svgClone.removeAttribute('style');
 
-  // افکت برنده در Canvas جداگانه رسم می‌شود.
-  // بنابراین نسخه ثابت SVG بدون افکت ذخیره می‌شود.
-
   const cloneEffect=svgClone.querySelector('#winnerEffect');
 
   if(cloneEffect){
@@ -1249,42 +1242,46 @@ async function prepareWheelRecordingImage(){
     {type:'image/svg+xml;charset=utf-8'}
   );
 
-  wheelSvgUrl=URL.createObjectURL(svgBlob);
+  session.svgUrl=URL.createObjectURL(svgBlob);
 
-  wheelSvgImage=new Image();
+  session.svgImage=new Image();
 
   await new Promise((resolve,reject)=>{
 
-    wheelSvgImage.onload=resolve;
+    session.svgImage.onload=resolve;
 
-    wheelSvgImage.onerror=function(){
+    session.svgImage.onerror=function(){
       reject(new Error('بارگذاری تصویر SVG گردونه ناموفق بود.'));
     };
 
-    wheelSvgImage.src=wheelSvgUrl;
+    session.svgImage.src=session.svgUrl;
   });
 
-  if(!wheelSvgImage.naturalWidth||!wheelSvgImage.naturalHeight){
+  if(
+    !session.svgImage.naturalWidth||
+    !session.svgImage.naturalHeight
+  ){
     throw new Error('ابعاد تصویر SVG معتبر نیست.');
   }
 
   recordingLog(
     'IMAGE READY',
-    'تصویر اصلی گردونه آماده شد.'
+    'تصویر اصلی گردونه برای نشست ضبط آماده شد.',
+    session.id
   );
 }
 
 // ==========================================
-// رسم قاب طلایی و گردونه روی Canvas
+// رسم قاب طلایی و گردونه روی Canvas نشست
 // ==========================================
 
-function drawWheelRecordingFrame(){
+function drawWheelRecordingFrame(session){
 
-  if(!wheelCanvasContext||!wheelSvgImage){
+  if(!session||!session.canvasContext||!session.svgImage){
     throw new Error('Canvas یا تصویر گردونه آماده نیست.');
   }
 
-  const ctx=wheelCanvasContext;
+  const ctx=session.canvasContext;
   const angle=getWheelCurrentAngle();
 
   ctx.clearRect(0,0,1000,1000);
@@ -1318,7 +1315,7 @@ function drawWheelRecordingFrame(){
   ctx.rotate(angle);
 
   ctx.drawImage(
-    wheelSvgImage,
+    session.svgImage,
     -470,
     -470,
     940,
@@ -1327,10 +1324,7 @@ function drawWheelRecordingFrame(){
 
   ctx.restore();
 
-  // رسم افکت برنده روی همان قطاع در فیلم
   drawWinnerEffectOnCanvas(ctx);
-
-  // نشانگر بالای گردونه
 
   ctx.save();
 
@@ -1362,8 +1356,6 @@ function drawWheelRecordingFrame(){
   ctx.fill();
 
   ctx.restore();
-
-  // مرکز گردونه
 
   const hubGradient=ctx.createRadialGradient(
     465,455,10,
@@ -1403,19 +1395,21 @@ function drawWheelRecordingFrame(){
 }
 
 // ==========================================
-// شروع حلقه رسم فریم‌ها
+// حلقه رسم فریم‌های یک نشست
 // ==========================================
 
-function recordingFrameLoop(){
+function recordingFrameLoop(session){
 
-  if(!recordingActive) return;
+  if(!session||!session.active) return;
 
   try{
 
-    drawWheelRecordingFrame();
+    drawWheelRecordingFrame(session);
 
-    wheelAnimationFrame=requestAnimationFrame(
-      recordingFrameLoop
+    session.animationFrame=requestAnimationFrame(
+      function(){
+        recordingFrameLoop(session);
+      }
     );
 
   }catch(error){
@@ -1423,29 +1417,44 @@ function recordingFrameLoop(){
     recordingLog(
       'FRAME ERROR',
       'خطا در رسم فریم.',
-      error
+      {
+        sessionId:session.id,
+        error:error
+      }
     );
 
-    recordingActive=false;
+    session.active=false;
 
-    if(wheelAnimationFrame){
-      cancelAnimationFrame(wheelAnimationFrame);
-      wheelAnimationFrame=null;
+    if(session.animationFrame){
+      cancelAnimationFrame(session.animationFrame);
+      session.animationFrame=null;
     }
 
-    setRecordingMessage(
-      '❌ خطا هنگام رسم تصویر: '+error.message,
-      'error'
-    );
+    setRecordingMessage('', 'error',session);
 
-    if(wheelRecorder&&wheelRecorder.state==='recording'){
-      wheelRecorder.stop();
+    // فقط همین نشست متوقف می‌شود.
+    // نشست‌های دیگر تحت تأثیر قرار نمی‌گیرند.
+
+    if(
+      session.recorder&&
+      session.recorder.state==='recording'
+    ){
+      try{
+        session.recorder.stop();
+      }catch(stopError){
+        recordingLog(
+          'FRAME STOP ERROR',
+          'توقف ضبط پس از خطای فریم ناموفق بود.',
+          stopError
+        );
+      }
     }
   }
 }
 
 // ==========================================
 // انتخاب فرمت ضبط
+// اولویت با MP4/H.264 و سپس WebM
 // ==========================================
 
 function getSupportedVideoMimeType(){
@@ -1459,6 +1468,9 @@ function getSupportedVideoMimeType(){
   }
 
   const formats=[
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4',
     'video/webm;codecs=vp8',
     'video/webm',
     'video/webm;codecs=vp9'
@@ -1469,6 +1481,13 @@ function getSupportedVideoMimeType(){
     try{
 
       if(MediaRecorder.isTypeSupported(format)){
+
+        recordingLog(
+          'FORMAT SELECTED',
+          'فرمت قابل پشتیبانی انتخاب شد.',
+          format
+        );
+
         return format;
       }
 
@@ -1477,53 +1496,104 @@ function getSupportedVideoMimeType(){
       recordingLog(
         'FORMAT CHECK',
         'بررسی فرمت ناموفق بود.',
-        error
+        {
+          format:format,
+          error:error
+        }
       );
     }
   }
 
-  throw new Error('هیچ فرمت WebM سازگاری پیدا نشد.');
+  // مرورگر در صورت پشتیبانی، فرمت پیش‌فرض را انتخاب می‌کند.
+  return '';
 }
 
 // ==========================================
-// پاک‌سازی ضبط قبلی
+// آزادسازی منابع یک نشست ضبط
 // ==========================================
 
-function clearPreviousRecording(){
+function cleanupRecordingSession(session){
 
-  wheelVideoBlob=null;
-  wheelRecordChunks=[];
+  if(!session) return;
 
-  if(wheelSvgUrl){
-    URL.revokeObjectURL(wheelSvgUrl);
-    wheelSvgUrl=null;
+  session.active=false;
+
+  if(session.animationFrame){
+    cancelAnimationFrame(session.animationFrame);
+    session.animationFrame=null;
   }
 
-  if(recordingStream){
-    recordingStream.getTracks().forEach(track=>{
-      track.stop();
-    });
-    recordingStream=null;
+  if(session.stream){
+
+    try{
+      session.stream.getTracks().forEach(track=>{
+        track.stop();
+      });
+    }catch(error){
+      recordingLog(
+        'STREAM CLEANUP ERROR',
+        'آزادسازی جریان ضبط ناموفق بود.',
+        error
+      );
+    }
+
+    session.stream=null;
   }
 
-  wheelRecorder=null;
+  if(session.svgUrl){
+
+    try{
+      URL.revokeObjectURL(session.svgUrl);
+    }catch(error){
+      recordingLog(
+        'URL CLEANUP ERROR',
+        'آزادسازی آدرس موقت تصویر ناموفق بود.',
+        error
+      );
+    }
+
+    session.svgUrl=null;
+  }
+
+  session.canvas=null;
+  session.canvasContext=null;
+  session.svgImage=null;
 }
 
 // ==========================================
-// شروع ضبط
+// شروع ضبط مستقل برای یک چرخش
 // ==========================================
 
 async function startWheelRecording(){
 
-  if(recordingActive){
-    return false;
-  }
+  const session={
+    id:Date.now()+'-'+Math.random().toString(36).slice(2),
+    recorder:null,
+    chunks:[],
+    stream:null,
+    canvas:null,
+    canvasContext:null,
+    svgImage:null,
+    svgUrl:null,
+    animationFrame:null,
+    active:false,
+    mimeType:'',
+    blob:null,
+    stopPromise:null,
+    completed:false
+  };
 
   try{
 
-    setRecordingMessage('⏳ در حال آماده‌سازی ضبط...');
+    activeRecordingSession=session;
 
-    recordingLog('START','آماده‌سازی ضبط آغاز شد.');
+    setRecordingMessage('⏳',null,session);
+
+    recordingLog(
+      'START',
+      'آماده‌سازی نشست ضبط آغاز شد.',
+      session.id
+    );
 
     if(!window.MediaRecorder){
       throw new Error('مرورگر از MediaRecorder پشتیبانی نمی‌کند.');
@@ -1533,27 +1603,22 @@ async function startWheelRecording(){
       throw new Error('قابلیت Canvas Capture Stream موجود نیست.');
     }
 
-    clearPreviousRecording();
+    session.canvas=document.createElement('canvas');
 
-    wheelCanvas=document.createElement('canvas');
+    session.canvas.width=1000;
+    session.canvas.height=1000;
 
-    wheelCanvas.width=1000;
-    wheelCanvas.height=1000;
-
-    wheelCanvasContext=wheelCanvas.getContext('2d',{
+    session.canvasContext=session.canvas.getContext('2d',{
       alpha:false
     });
 
-    if(!wheelCanvasContext){
+    if(!session.canvasContext){
       throw new Error('ساخت Canvas ناموفق بود.');
     }
 
-    await prepareWheelRecordingImage();
+    await prepareWheelRecordingImage(session);
 
-    drawWheelRecordingFrame();
-
-    // چون Canvas با alpha:false ساخته شده،
-    // بررسی شفافیت معتبر نیست؛ محتوای RGB بررسی می‌شود.
+    drawWheelRecordingFrame(session);
 
     const samplePoints=[
       [500,150],
@@ -1566,7 +1631,7 @@ async function startWheelRecording(){
 
     for(const samplePoint of samplePoints){
 
-      const sample=wheelCanvasContext.getImageData(
+      const sample=session.canvasContext.getImageData(
         samplePoint[0],
         samplePoint[1],
         1,
@@ -1587,58 +1652,72 @@ async function startWheelRecording(){
       throw new Error('Canvas تصویر قابل مشاهده ندارد.');
     }
 
-    const stream=wheelCanvas.captureStream(30);
+    session.stream=session.canvas.captureStream(30);
 
-    if(!stream){
+    if(!session.stream){
       throw new Error('ساخت جریان ویدئویی ناموفق بود.');
     }
 
-    recordingStream=stream;
+    session.mimeType=getSupportedVideoMimeType();
 
-    const mimeType=getSupportedVideoMimeType();
-    const options=mimeType?{mimeType}:undefined;
+    const options=session.mimeType
+      ?{mimeType:session.mimeType}
+      :undefined;
 
-    wheelRecorder=new MediaRecorder(
-      stream,
+    session.recorder=new MediaRecorder(
+      session.stream,
       options
     );
 
-    wheelRecordChunks=[];
+    // هر نشست آرایه مخصوص خودش را دارد.
+    // هیچ آرایه سراسری برای جمع‌آوری داده استفاده نمی‌شود.
 
-    wheelRecorder.ondataavailable=function(event){
+    session.recorder.ondataavailable=function(event){
 
       if(event.data&&event.data.size>0){
 
-        wheelRecordChunks.push(event.data);
+        session.chunks.push(event.data);
 
         recordingLog(
           'DATA',
-          'داده دریافت شد: '+event.data.size+' بایت'
+          'داده دریافت شد.',
+          {
+            sessionId:session.id,
+            size:event.data.size,
+            type:event.data.type,
+            totalChunks:session.chunks.length
+          }
         );
       }
     };
 
-    wheelRecorder.onerror=function(event){
+    session.recorder.onerror=function(event){
 
       const error=event.error||event;
 
       recordingLog(
         'RECORDER ERROR',
         'خطای داخلی ضبط‌کننده.',
-        error
+        {
+          sessionId:session.id,
+          error:error
+        }
       );
 
-      setRecordingMessage(
-        '❌ خطای ضبط: '+(error.message||'نامشخص'),
-        'error'
-      );
+      setRecordingMessage('', 'error',session);
     };
 
-    wheelRecorder.onstart=function(){
+    session.recorder.onstart=function(){
 
       recordingLog(
         'RECORDER STARTED',
-        'ضبط با فرمت '+(mimeType||'WebM')+' آغاز شد.'
+        'ضبط با فرمت واقعی آغاز شد.',
+        {
+          sessionId:session.id,
+          mimeType:session.recorder.mimeType||
+            session.mimeType||
+            'فرمت پیش‌فرض مرورگر'
+        }
       );
     };
 
@@ -1646,62 +1725,61 @@ async function startWheelRecording(){
       requestAnimationFrame(resolve);
     });
 
-    wheelRecorder.start(250);
+    session.recorder.start(250);
 
-    recordingActive=true;
+    session.active=true;
 
-    recordingFrameLoop();
+    recordingFrameLoop(session);
 
-    setRecordingMessage('🔴 ضبط گردونه فعال شد.');
+    setRecordingMessage('⏳',null,session);
 
     recordingLog(
       'READY',
-      'ضبط با موفقیت شروع شد.'
+      'ضبط با موفقیت شروع شد.',
+      session.id
     );
 
-    return true;
+    return session;
 
   }catch(error){
 
-    recordingActive=false;
-
-    if(wheelAnimationFrame){
-      cancelAnimationFrame(wheelAnimationFrame);
-      wheelAnimationFrame=null;
-    }
-
-    if(recordingStream){
-      recordingStream.getTracks().forEach(track=>track.stop());
-      recordingStream=null;
-    }
-
-    if(wheelSvgUrl){
-      URL.revokeObjectURL(wheelSvgUrl);
-      wheelSvgUrl=null;
-    }
+    cleanupRecordingSession(session);
 
     recordingLog(
       'START ERROR',
-      error.message,
-      error
+      'شروع ضبط ناموفق بود؛ چرخش بدون ضبط ادامه می‌یابد.',
+      {
+        sessionId:session.id,
+        error:error
+      }
     );
 
-    setRecordingMessage(
-      '❌ شروع ضبط ناموفق بود: '+error.message,
-      'error'
-    );
+    setRecordingMessage('', 'error',session);
 
-    return false;
+    if(activeRecordingSession===session){
+      activeRecordingSession=null;
+    }
+
+    return null;
   }
 }
 
 // ==========================================
-// توقف ضبط و ساخت فایل و آپلود
+// توقف نشست، ساخت فایل و آپلود پس‌زمینه
 // ==========================================
 
-async function stopWheelRecording(){
+function stopWheelRecording(session){
 
-  return new Promise(resolve=>{
+  if(!session){
+    return Promise.resolve(null);
+  }
+
+  // اگر توقف همین نشست قبلاً درخواست شده، همان Promise برگردانده می‌شود.
+  if(session.stopPromise){
+    return session.stopPromise;
+  }
+
+  session.stopPromise=new Promise(resolve=>{
 
     let settled=false;
 
@@ -1711,39 +1789,177 @@ async function stopWheelRecording(){
 
       settled=true;
 
-      if(recordingStream){
-        recordingStream.getTracks().forEach(track=>{
-          track.stop();
-        });
-        recordingStream=null;
-      }
+      session.completed=true;
 
-      if(wheelSvgUrl){
-        URL.revokeObjectURL(wheelSvgUrl);
-        wheelSvgUrl=null;
+      cleanupRecordingSession(session);
+
+      if(activeRecordingSession===session){
+
+        activeRecordingSession=null;
+
+        if(blob&&blob.size>0){
+          setRecordingMessage('', 'success');
+        }else{
+          setRecordingMessage('', 'error');
+        }
       }
 
       resolve(blob||null);
     }
 
+    async function processStoppedRecording(){
+
+      try{
+
+        // این callback فقط به اطلاعات محلی همین نشست دسترسی دارد.
+        // هیچ متغیر سراسری ضبطی در این قسمت استفاده نمی‌شود.
+
+        const recorderRef=session.recorder;
+        const chunksRef=session.chunks;
+
+        const actualMimeType=
+          recorderRef.mimeType||
+          (
+            chunksRef[0]&&
+            chunksRef[0].type
+          )||
+          session.mimeType||
+          '';
+
+        if(!actualMimeType){
+          throw new Error('نوع واقعی فایل ضبط‌شده مشخص نیست.');
+        }
+
+        // رویداد onstop پس از آخرین dataavailable اجرا می‌شود.
+        // بنابراین تمام قطعات نهایی در chunksRef قرار گرفته‌اند.
+
+        const videoBlob=new Blob(
+          chunksRef,
+          {type:actualMimeType}
+        );
+
+        session.blob=videoBlob;
+
+        if(!videoBlob||videoBlob.size===0){
+          throw new Error('فایل ویدئویی خالی است.');
+        }
+
+        recordingLog(
+          'COMPLETE',
+          'فایل ویدئویی نشست ساخته شد.',
+          {
+            sessionId:session.id,
+            size:videoBlob.size,
+            type:videoBlob.type,
+            chunks:chunksRef.length
+          }
+        );
+
+        // منابع ضبط پس از ساخته‌شدن فایل آزاد می‌شوند.
+        // آپلود فقط از Blob مستقل همین نشست استفاده می‌کند.
+
+        cleanupRecordingSession(session);
+
+        let uploadResult;
+
+        try{
+
+          uploadResult=await uploadWheelVideo(videoBlob);
+
+          recordingLog(
+            'UPLOAD COMPLETE',
+            'لینک مستقیم آماده انتقال به مرحله بعد است.',
+            {
+              sessionId:session.id,
+              uploadResult:uploadResult
+            }
+          );
+
+        }catch(uploadError){
+
+          recordingLog(
+            'UPLOAD FINAL ERROR',
+            'آپلود این نشست ناموفق بود.',
+            {
+              sessionId:session.id,
+              error:uploadError
+            }
+          );
+
+          finish(videoBlob);
+          return;
+        }
+
+        // ارسال لینک به TelebotHost
+
+        try{
+
+          if(activeRecordingSession===session){
+            setRecordingMessage('⏳',null,session);
+          }
+
+          const webhookResult=await sendVideoLinkToBot(
+            uploadResult.downloadUrl
+          );
+
+          recordingLog(
+            'VIDEO LINK RECEIVED',
+            'TelebotHost دریافت لینک را تأیید کرد.',
+            {
+              sessionId:session.id,
+              result:webhookResult
+            }
+          );
+
+        }catch(webhookError){
+
+          recordingLog(
+            'VIDEO WEBHOOK ERROR',
+            'ارسال لینک این نشست به TelebotHost ناموفق بود.',
+            {
+              sessionId:session.id,
+              error:webhookError
+            }
+          );
+        }
+
+        finish(videoBlob);
+
+      }catch(error){
+
+        recordingLog(
+          'FILE ERROR',
+          'ساخت یا پردازش فایل این نشست ناموفق بود.',
+          {
+            sessionId:session.id,
+            error:error
+          }
+        );
+
+        finish(null);
+      }
+    }
+
     try{
 
-      recordingActive=false;
+      session.active=false;
 
-      if(wheelAnimationFrame){
-        cancelAnimationFrame(wheelAnimationFrame);
-        wheelAnimationFrame=null;
+      if(session.animationFrame){
+        cancelAnimationFrame(session.animationFrame);
+        session.animationFrame=null;
       }
 
-      if(!wheelRecorder){
+      if(!session.recorder){
+
         finish(null);
         return;
       }
 
-      if(wheelRecorder.state==='inactive'){
+      if(session.recorder.state==='inactive'){
 
-        if(wheelVideoBlob&&wheelVideoBlob.size>0){
-          finish(wheelVideoBlob);
+        // اگر ضبط قبلاً متوقف شده باشد، فایل موجود بررسی می‌شود.
+        if(session.blob&&session.blob.size>0){
+          finish(session.blob);
         }else{
           finish(null);
         }
@@ -1751,147 +1967,37 @@ async function stopWheelRecording(){
         return;
       }
 
-      setRecordingMessage('⏳ در حال نهایی‌کردن فیلم...');
+      if(activeRecordingSession===session){
+        setRecordingMessage('⏳',null,session);
+      }
 
-      wheelRecorder.onstop=async function(){
+      // رویداد onstop بعد از آخرین dataavailable اجرا می‌شود.
+      session.recorder.onstop=processStoppedRecording;
 
-        try{
-
-          // تغییر آزمایشی: نوع فایل نهایی MP4 اعلام می‌شود.
-          // محتوای واقعی ضبط‌شده همچنان WebM است.
-
-          wheelVideoBlob=new Blob(
-            wheelRecordChunks,
-            {type:'video/mp4'}
-          );
-
-          if(!wheelVideoBlob||wheelVideoBlob.size===0){
-            throw new Error('فایل ویدئویی خالی است.');
-          }
-
-          recordingLog(
-            'COMPLETE',
-            'فایل ویدئویی ساخته شد.',
-            {
-              size:wheelVideoBlob.size,
-              type:wheelVideoBlob.type,
-              chunks:wheelRecordChunks.length
-            }
-          );
-
-          // آپلود مستقیم همان Blob به EasySend
-
-          let uploadResult;
-
-          try{
-
-            uploadResult=await uploadWheelVideo(
-              wheelVideoBlob
-            );
-
-            recordingLog(
-              'UPLOAD COMPLETE',
-              'لینک مستقیم آماده انتقال به مرحله بعد است.',
-              uploadResult
-            );
-
-          }catch(uploadError){
-
-            recordingLog(
-              'UPLOAD FINAL ERROR',
-              uploadError.message,
-              uploadError
-            );
-
-            setRecordingMessage(
-              '❌ آپلود ناموفق بود: '+uploadError.message,
-              'error'
-            );
-
-            finish(wheelVideoBlob);
-            return;
-          }
-
-          // ارسال لینک آپلودشده به TelebotHost
-
-          try{
-
-            setRecordingMessage(
-              '⏳ آپلود انجام شد؛ در حال ارسال لینک به ربات...'
-            );
-
-            const webhookResult=await sendVideoLinkToBot(
-              uploadResult.downloadUrl
-            );
-
-            recordingLog(
-              'VIDEO LINK RECEIVED',
-              'TelebotHost دریافت لینک را تأیید کرد.',
-              webhookResult
-            );
-
-            setRecordingMessage(
-              '✅ آپلود موفق بود و لینک با موفقیت به ربات رسید.',
-              'success'
-            );
-
-          }catch(webhookError){
-
-            recordingLog(
-              'VIDEO WEBHOOK ERROR',
-              webhookError.message,
-              webhookError
-            );
-
-            setRecordingMessage(
-              '⚠️ فیلم آپلود شد، اما ارسال لینک به ربات ناموفق بود: '+
-              webhookError.message,
-              'error'
-            );
-          }
-
-          finish(wheelVideoBlob);
-
-        }catch(error){
-
-          recordingLog(
-            'FILE ERROR',
-            error.message,
-            error
-          );
-
-          setRecordingMessage(
-            '❌ ساخت فایل ناموفق بود: '+error.message,
-            'error'
-          );
-
-          finish(null);
-        }
-      };
-
-      wheelRecorder.stop();
+      session.recorder.stop();
 
       recordingLog(
         'STOP',
-        'درخواست توقف ضبط ارسال شد.'
+        'درخواست توقف نشست ضبط ارسال شد.',
+        session.id
       );
 
     }catch(error){
 
       recordingLog(
         'STOP ERROR',
-        error.message,
-        error
-      );
-
-      setRecordingMessage(
-        '❌ توقف ضبط ناموفق بود: '+error.message,
-        'error'
+        'توقف نشست ضبط ناموفق بود.',
+        {
+          sessionId:session.id,
+          error:error
+        }
       );
 
       finish(null);
     }
   });
+
+  return session.stopPromise;
 }
 
 // ==========================================
@@ -2364,10 +2470,13 @@ function animateToPrize(prizeCode){
     const adjustment=
       (targetAngle-currentAngle+360)%360;
 
-    const recordingStarted=
+    // نشست مخصوص همین چرخش ساخته می‌شود.
+    // در صورت شکست ضبط، چرخش همچنان ادامه پیدا می‌کند.
+
+    const recordingSession=
       await startWheelRecording();
 
-    if(!recordingStarted){
+    if(!recordingSession){
 
       recordingLog(
         'ANIMATION CONTINUES',
@@ -2398,13 +2507,8 @@ function animateToPrize(prizeCode){
         clearTimeout(fallbackTimer);
       }
 
-      // پیام اول دقیقاً پس از توقف گردونه و مشخص‌شدن جایزه
-
       status.textContent=
-        '⏳ گردونه در حال ثبت جایزه شماست. لطفاً تا پایان فرایند، گردونه را نبندید.';
-
-      // فعال‌سازی افکت روی خانه انتخاب‌شده
-      // این افکت هم در SVG و هم در Canvas اجرا می‌شود.
+        'لطفاً تا پایان این مرحله، گردونه را باز نگه دارید.';
 
       createWinnerEffect(index);
 
@@ -2417,38 +2521,55 @@ function animateToPrize(prizeCode){
         }
       );
 
-      try{
+      // فقط برای تکمیل افکت برنده صبر می‌کنیم.
+      // آپلود و وب‌هوک در این انتظار دخالت ندارند.
 
-        // فرصت کافی برای ثبت کامل افکت در فیلم
-
-        await new Promise(resolveDelay=>{
-          setTimeout(
-            resolveDelay,
-            WINNER_EFFECT_DURATION+100
-          );
-        });
-
-        if(recordingStarted){
-          await stopWheelRecording();
-        }
-
-      }catch(error){
-
-        recordingLog(
-          'FINAL RECORDING ERROR',
-          'فرایند ضبط یا آپلود با خطا پایان یافت.',
-          error
+      await new Promise(resolveDelay=>{
+        setTimeout(
+          resolveDelay,
+          WINNER_EFFECT_DURATION+100
         );
+      });
 
-      }finally{
+      if(recordingSession){
 
-        // پیام دوم مستقل از موفقیت ضبط، آپلود یا ارسال لینک است.
+        // توقف ضبط آغاز می‌شود؛ اما منتظر آپلود نمی‌مانیم.
+        // اطلاعات نشست در متغیرهای مستقل خودش باقی می‌ماند.
 
-        status.textContent=
-          '🎉 جایزه شما با موفقیت ثبت شد.';
+        stopWheelRecording(recordingSession)
+          .then(function(){
 
-        resolve();
+            recordingLog(
+              'BACKGROUND VIDEO PROCESS FINISHED',
+              'فرایند جانبی فیلم پایان یافت.',
+              recordingSession.id
+            );
+
+          })
+          .catch(function(error){
+
+            // خطای جانبی هرگز نتیجه جایزه را تغییر نمی‌دهد.
+
+            recordingLog(
+              'BACKGROUND VIDEO PROCESS ERROR',
+              'فرایند جانبی فیلم با خطا پایان یافت.',
+              {
+                sessionId:recordingSession.id,
+                error:error
+              }
+            );
+
+          });
+
+      }else{
+
+        recordingStatus.textContent='';
       }
+
+      // انیمیشن پایان یافته است.
+      // spinWheel اکنون می‌تواند جایزه را نمایش دهد.
+
+      resolve();
     }
 
     function onTransitionEnd(event){
@@ -2509,10 +2630,10 @@ async function spinWheel(){
 
   result.classList.remove('show');
 
-  clearWinnerEffect();
-  clearPreviousRecording();
+  // دیگر ضبط قبلی را پاک نمی‌کنیم.
+  // هر ضبط چرخه عمر مستقل خودش را دارد.
 
-  recordingStatus.textContent='';
+  clearWinnerEffect();
 
   status.textContent=
     'در حال ثبت چرخش و دریافت جایزه...';
@@ -2558,6 +2679,8 @@ async function spinWheel(){
 
     await animateToPrize(selectedPrize.code);
 
+    // نمایش جایزه مستقل از ضبط، آپلود و ارسال فیلم است.
+
     resultTitle.textContent=
       '🎉 '+data.prize.name;
 
@@ -2565,9 +2688,6 @@ async function spinWheel(){
       'جایزه با موفقیت در سیستم ثبت شد.';
 
     result.classList.add('show');
-
-    // پیام دوم در animateToPrize تنظیم شده است؛
-    // اینجا عمداً بازنویسی نمی‌شود.
 
     const updatedChances=Number(data.chances);
 
